@@ -26,6 +26,18 @@ agent-proof capture --out proof.json
 agent-proof verify proof.json
 ```
 
+## See it work
+
+The first envelope is deliberately honest: it records evidence without claiming a user-visible result.
+
+```json
+{"schema":"agent-proof/v1","observed":false,"commands":[],"artifacts":[],"notes":["Capture records evidence; it does not claim a user-visible result."],"sha256":"e21fe6e647a7e4f650a9660d57f5452a6a57f6e82aece4ec2feddc13eacac881"}
+```
+
+## Related tools
+
+Use [Agent Eval Kit](https://github.com/jonah-ux/agent-eval-kit) for repeatable checks, [Agent Resume](https://github.com/jonah-ux/agent-resume) for continuation records, and [Worktree Conservator](https://github.com/jonah-ux/worktree-conservator) when the evidence concerns workspace lifecycle.
+
 The `agent-proof/v1` record includes a hash, commands, artifacts, notes, and an explicit
 `observed` field. A captured envelope stays unverified until a real observed result is recorded.
 
