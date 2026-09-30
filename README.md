@@ -1,22 +1,33 @@
-# Evidence Bundle Builder
+# Agent Proof
 
 ![evidence bundle builder workflow](docs/header.svg)
 
 **Capture what ran, what changed, and what was actually observed.**
 
-## Install
+[![CI](https://github.com/jonah-ux/agent-proof/actions/workflows/ci.yml/badge.svg)](https://github.com/jonah-ux/agent-proof/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776ab)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
+
+Agent Proof creates a small JSON evidence envelope for work that needs a clear boundary between
+“a command ran” and “the intended result was observed.” The file is easy to archive, inspect, and
+pass to another agent.
+
+## Try it in 30 seconds
 
 ```bash
-pip install git+https://github.com/jonah-ux/agent-proof.git@main
+python -m pip install git+https://github.com/jonah-ux/agent-proof.git@main
+python demos/demo.py
 ```
 
-## Quick start
+Capture an envelope, then verify it:
 
 ```bash
-agent-proof --help
+agent-proof capture --out proof.json
+agent-proof verify proof.json
 ```
 
-The first release is intentionally small, offline-friendly, and easy to inspect. JSON output is designed for agents; diagnostics stay explicit.
+The `agent-proof/v1` record includes a hash, commands, artifacts, notes, and an explicit
+`observed` field. A captured envelope stays unverified until a real observed result is recorded.
 
 ## Development
 
@@ -26,8 +37,6 @@ python -m build --sdist --wheel
 python demos/demo.py
 ```
 
-## Limits
+This tool records evidence; it does not infer deployment, installation, or user-visible success.
 
-Read the command help and [release guide](docs/releasing.md) before using this in automation. This project does not claim permissions, isolation, verification, or provider behavior beyond the output fields it can prove.
-
-MIT licensed. Contributions and sanitized bug reports are welcome.
+MIT licensed.
