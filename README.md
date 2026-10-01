@@ -111,6 +111,33 @@ and unknowns. The tarball contains the proof document, a manifest, and every ref
 artifact under controlled archive names. Its gzip and tar metadata are normalized for repeatable
 digests.
 
+### 5. Verify a bundle after the source workspace is gone
+
+```console
+agent-proof verify-bundle run-proof.tar.gz --require-observed --require-artifacts
+```
+
+`verify-bundle` is the independent readback path for `export/v2`. It checks the raw gzip/tar
+structure, rejects traversal, links, devices, duplicate members, unlisted files, and oversized
+payloads, validates every manifest size and digest, and materializes only the declared source and
+artifact bytes into a temporary private root. It then reuses the normal record, ledger, or run
+verifier and deletes that temporary root before returning. The original checkout and artifact
+root are not needed.
+
+Known sibling envelopes can be collected into the same ledger without importing their raw values:
+
+```console
+agent-proof collect --artifact-root ./run-files --run-id release-check \
+  --input ./run-files/policy.json \
+  --input ./run-files/sandbox.json \
+  --input ./run-files/evaluation.json \
+  --out ledger.json
+```
+
+Collection sorts relative paths, accepts only recognized `agent-*`/`context-pack` schemas, stores
+only source sizes/digests/schema labels, and leaves observation unknown unless the source explicitly
+declares it. An unknown schema or malformed input refuses the complete collection.
+
 ## Schemas
 
 | Schema | Purpose |
@@ -120,6 +147,8 @@ digests.
 | `agent-proof/run/v2` | Self-contained merged run proof |
 | `agent-proof/verify/v2` | Machine-readable verification result |
 | `agent-proof/export/v2` | Export manifest inside a deterministic bundle |
+| `agent-proof/bundle-verify/v1` | Independent verification result for an exported bundle |
+| `agent-proof/collect/v2` | Collection command result wrapping a verified ledger |
 
 Sibling outputs are treated as evidence files, not instructions. The demo and tests exercise
 `agent-policy/v1`, `agent-sandbox/v1`, and `agent-eval/v1`; adapters remain optional because the

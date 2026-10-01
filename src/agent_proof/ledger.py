@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 import re
 import tarfile
+import tempfile
 from typing import Any, Iterable
 
 
@@ -24,7 +25,22 @@ LEDGER_SCHEMA = "agent-proof/ledger/v2"
 RUN_SCHEMA = "agent-proof/run/v2"
 VERIFY_SCHEMA = "agent-proof/verify/v2"
 EXPORT_SCHEMA = "agent-proof/export/v2"
+COLLECT_SCHEMA = "agent-proof/collect/v2"
+BUNDLE_VERIFY_SCHEMA = "agent-proof/bundle-verify/v1"
 LEGACY_SCHEMA = "agent-proof/v1"
+
+COLLECTABLE_SCHEMAS = {
+    "agent-policy/v1": "policy decision",
+    "agent-sandbox/v1": "sandbox receipt",
+    "agent-eval/v1": "evaluation result",
+    "agent-trace/v1": "trace summary",
+    "context-pack/v1": "context pack",
+    "agent-resume/v1": "continuation record",
+    "agent-proof/v1": "legacy proof envelope",
+    RECORD_SCHEMA: "proof record",
+    LEDGER_SCHEMA: "proof ledger",
+    RUN_SCHEMA: "proof run",
+}
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _COMMIT = re.compile(r"^[0-9a-fA-F]{7,64}$")
@@ -278,6 +294,90 @@ def build_record(spec: dict[str, Any] | None = None, *, artifact_root: Path | No
         raise ProofError("prev_sha256 must be a 64-character lowercase digest")
     record["record_sha256"] = record_digest(record)
     return record
+
+
+def _relative_input(path: Path, artifact_root: Path) -> str:
+    try:
+        relative = path.expanduser().resolve().relative_to(artifact_root.expanduser().resolve())
+    except ValueError as exc:
+        raise ProofError(f"collect input is outside the artifact root: {path}") from exc
+    return _safe_relative(relative.as_posix(), "collect input")
+
+
+def _source_result(payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract only explicit result fields; never infer success from arbitrary content."""
+
+    observed = payload.get("observed") is True
+    partial = payload.get("partial") is True
+    unknowns: list[str] = []
+    if "observed" not in payload:
+        unknowns.append("source_observation_not_explicit")
+    if payload.get("ok") is False:
+        unknowns.append("source_reported_failure")
+    if payload.get("partial") is True:
+        unknowns.append("source_reported_partial")
+    coverage = payload.get("coverage")
+    if isinstance(coverage, dict) and coverage.get("status") not in (None, "complete"):
+        partial = True
+        unknowns.append("source_coverage_partial")
+    exit_code = payload.get("exit_code") if isinstance(payload.get("exit_code"), int) else None
+    duration_ms = payload.get("duration_ms") if isinstance(payload.get("duration_ms"), int) else None
+    return {
+        "exit_code": exit_code,
+        "duration_ms": duration_ms,
+        "stdout": "",
+        "stderr": "",
+        "observed": observed,
+        "partial": partial,
+        "unknowns": _unique_strings(unknowns),
+    }
+
+
+def collect_ledger(
+    inputs: Iterable[Path],
+    *,
+    run_id: str,
+    actor: str = "agent-proof-collect",
+    artifact_root: Path,
+    repository: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], list[str]]:
+    """Collect known sibling envelopes into a deterministic verified ledger.
+
+    Inputs are sorted by their root-relative path. Their bytes stay outside the ledger;
+    each record binds one source file by size, digest, and recognized schema. Unknown
+    schemas, duplicate paths, symlinks, malformed JSON, and root escapes refuse the
+    complete collection instead of producing a partial ledger that looks complete.
+    """
+
+    root = artifact_root.expanduser().resolve()
+    paths = list(inputs)
+    if not paths:
+        raise ProofError("collect requires at least one --input")
+    relative_paths = [_relative_input(path, root) for path in paths]
+    if len(set(relative_paths)) != len(relative_paths):
+        raise ProofError("collect inputs contain duplicate relative paths")
+    ordered = sorted(relative_paths)
+    ledger = make_ledger(run_id)
+    collected_schemas: list[str] = []
+    for relative in ordered:
+        target = _rooted_file(root, relative, "collect input")
+        payload = load_json(target)
+        schema = payload.get("schema")
+        if schema not in COLLECTABLE_SCHEMAS:
+            raise ProofError(f"unsupported collect input schema for {relative}: {schema!r}")
+        collected_schemas.append(schema)
+        spec = {
+            "run_id": run_id,
+            "actor": actor,
+            "repository": repository or {},
+            "operation": {"argv": ["agent-proof", "collect", relative]},
+            "result": _source_result(payload),
+            "sources": [{"path": relative, "label": COLLECTABLE_SCHEMAS[schema]}],
+            "notes": [f"Ingested {schema} as evidence input; source bytes remain external."],
+        }
+        record = build_record(spec, artifact_root=root)
+        ledger = append_record(ledger, record, artifact_root=root)
+    return ledger, collected_schemas
 
 
 def _verify_file_entries(entries: Any, artifact_root: Path | None, label: str, errors: list[str]) -> str:
@@ -646,6 +746,209 @@ def export_bundle(document: dict[str, Any], verification: dict[str, Any], output
                 for archive_path, payload in artifact_payloads:
                     archive.addfile(_tar_bytes(archive_path, payload), io.BytesIO(payload))
     return {"schema": EXPORT_SCHEMA, "ok": True, "path": str(output), "entries": manifest["entries"], "sha256": digest_file(output)}
+
+
+def _safe_archive_name(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value or "\\" in value or "\x00" in value:
+        raise ProofError(f"{label} must be a non-empty POSIX archive path")
+    if value.startswith("/"):
+        raise ProofError(f"{label} must not be absolute")
+    parts = value.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        raise ProofError(f"{label} contains an unsafe path component")
+    return "/".join(parts)
+
+
+def _bundle_failure(path: Path, errors: list[str], *, bundle_sha256: str | None = None) -> dict[str, Any]:
+    return {
+        "schema": BUNDLE_VERIFY_SCHEMA,
+        "ok": False,
+        "integrity": False,
+        "path": str(path),
+        "bundle_sha256": bundle_sha256,
+        "manifest_sha256": None,
+        "document_sha256": None,
+        "kind": "bundle",
+        "record_count": 0,
+        "observed": False,
+        "partial": True,
+        "unknowns": [],
+        "artifact_state": "unknown",
+        "source_state": "unknown",
+        "record_hashes": [],
+        "errors": errors,
+    }
+
+
+def verify_bundle(
+    bundle: Path,
+    *,
+    require_observed: bool = False,
+    require_artifacts: bool = False,
+    max_bytes: int = 64 * 1024 * 1024,
+) -> dict[str, Any]:
+    """Verify an exported bundle without access to its original artifact root."""
+
+    bundle = bundle.expanduser()
+    try:
+        bundle_sha256 = digest_file(bundle)
+    except ProofError as exc:
+        return _bundle_failure(bundle, [str(exc)])
+    if max_bytes <= 0:
+        return _bundle_failure(bundle, ["max_bytes must be positive"], bundle_sha256=bundle_sha256)
+
+    payloads: dict[str, bytes] = {}
+    errors: list[str] = []
+    total_bytes = 0
+    try:
+        with tarfile.open(bundle, mode="r:gz") as archive:
+            for member in archive.getmembers():
+                try:
+                    name = _safe_archive_name(member.name, "archive member")
+                except ProofError as exc:
+                    errors.append(str(exc))
+                    continue
+                if name in payloads:
+                    errors.append(f"duplicate archive member: {name}")
+                    continue
+                if not member.isfile() or member.issym() or member.islnk():
+                    errors.append(f"archive member is not a regular file: {name}")
+                    continue
+                if member.size < 0 or member.size > max_bytes:
+                    errors.append(f"archive member exceeds size limit: {name}")
+                    continue
+                extracted = archive.extractfile(member)
+                if extracted is None:
+                    errors.append(f"archive member has no readable payload: {name}")
+                    continue
+                payload = extracted.read(max_bytes + 1)
+                if len(payload) != member.size or len(payload) > max_bytes:
+                    errors.append(f"archive member size mismatch: {name}")
+                    continue
+                total_bytes += len(payload)
+                if total_bytes > max_bytes:
+                    errors.append("archive total exceeds size limit")
+                    break
+                payloads[name] = payload
+    except (OSError, tarfile.TarError, EOFError) as exc:
+        return _bundle_failure(bundle, [f"cannot read gzip/tar bundle: {exc}"], bundle_sha256=bundle_sha256)
+    if errors:
+        return _bundle_failure(bundle, sorted(errors), bundle_sha256=bundle_sha256)
+    if "manifest.json" not in payloads or "proof/document.json" not in payloads:
+        missing = [name for name in ("manifest.json", "proof/document.json") if name not in payloads]
+        return _bundle_failure(bundle, [f"missing required bundle member: {name}" for name in missing], bundle_sha256=bundle_sha256)
+
+    manifest_payload = payloads["manifest.json"]
+    document_payload = payloads["proof/document.json"]
+    manifest_sha256 = digest_bytes(manifest_payload)
+    document_sha256 = digest_bytes(document_payload)
+    try:
+        manifest = _as_mapping(json.loads(manifest_payload.decode("utf-8")), "manifest")
+        document = _as_mapping(json.loads(document_payload.decode("utf-8")), "proof/document.json")
+    except (UnicodeError, json.JSONDecodeError, ProofError) as exc:
+        return _bundle_failure(bundle, [f"bundle JSON is invalid: {exc}"], bundle_sha256=bundle_sha256) | {
+            "manifest_sha256": manifest_sha256,
+            "document_sha256": document_sha256,
+        }
+
+    if manifest.get("schema") != EXPORT_SCHEMA:
+        errors.append(f"unsupported export schema: {manifest.get('schema')!r}")
+    if manifest.get("input_schema") != document.get("schema"):
+        errors.append("manifest input_schema does not match proof document")
+    if manifest.get("input_sha256") != digest_json(document):
+        errors.append("manifest input_sha256 does not match proof document")
+    entries = manifest.get("entries")
+    if not isinstance(entries, list):
+        errors.append("manifest entries must be a list")
+        entries = []
+    listed: set[str] = set()
+    materialized: list[tuple[str, str, bytes]] = []
+    for index, raw_entry in enumerate(entries):
+        try:
+            entry = _as_mapping(raw_entry, f"manifest.entries[{index}]")
+            archive_path = _safe_archive_name(entry.get("archive_path"), f"manifest.entries[{index}].archive_path")
+            if archive_path in listed:
+                raise ProofError(f"duplicate manifest archive path: {archive_path}")
+            listed.add(archive_path)
+            if archive_path not in payloads:
+                raise ProofError(f"manifest entry is missing from archive: {archive_path}")
+            payload = payloads[archive_path]
+            if entry.get("size") != len(payload) or entry.get("sha256") != digest_bytes(payload):
+                raise ProofError(f"manifest digest mismatch: {archive_path}")
+            if archive_path == "proof/document.json":
+                if entry.get("size") != len(document_payload):
+                    raise ProofError("manifest proof/document.json size mismatch")
+                continue
+            source_path = entry.get("source_path")
+            category = archive_path.split("/", 1)[0] if "/" in archive_path else ""
+            if category not in {"sources", "artifacts"} or source_path is None:
+                raise ProofError(f"manifest entry lacks a valid source category/path: {archive_path}")
+            relative = _safe_relative(source_path, f"manifest.entries[{index}].source_path")
+            materialized.append((category, relative, payload))
+        except ProofError as exc:
+            errors.append(str(exc))
+    allowed = {"manifest.json"} | listed
+    extra = sorted(set(payloads) - allowed)
+    if extra:
+        errors.extend(f"archive member is not listed in manifest: {name}" for name in extra)
+    if "proof/document.json" not in listed:
+        errors.append("manifest does not list proof/document.json")
+    if errors:
+        return _bundle_failure(bundle, sorted(errors), bundle_sha256=bundle_sha256) | {
+            "manifest_sha256": manifest_sha256,
+            "document_sha256": document_sha256,
+        }
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="agent-proof-bundle-") as temp_dir:
+            root = Path(temp_dir)
+            seen_paths: set[str] = set()
+            for category, relative, payload in materialized:
+                if relative in seen_paths:
+                    raise ProofError(f"duplicate materialized source path: {relative}")
+                seen_paths.add(relative)
+                target = _rooted_target_for_write(root, relative, category)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(payload)
+            result = verify_document(document, artifact_root=root)
+    except (OSError, ProofError) as exc:
+        return _bundle_failure(bundle, [str(exc)], bundle_sha256=bundle_sha256) | {
+            "manifest_sha256": manifest_sha256,
+            "document_sha256": document_sha256,
+        }
+
+    final_errors = list(result["errors"])
+    if require_observed and not result["observed"]:
+        final_errors.append("observed result is required")
+    if require_artifacts and result["artifact_state"] != "verified":
+        final_errors.append("artifact verification is required")
+    return {
+        "schema": BUNDLE_VERIFY_SCHEMA,
+        "ok": not final_errors,
+        "integrity": result["ok"],
+        "path": str(bundle),
+        "bundle_sha256": bundle_sha256,
+        "manifest_sha256": manifest_sha256,
+        "document_sha256": document_sha256,
+        "kind": "bundle",
+        "record_count": result["record_count"],
+        "observed": result["observed"],
+        "partial": result["partial"],
+        "unknowns": result["unknowns"],
+        "artifact_state": result["artifact_state"],
+        "source_state": result["source_state"],
+        "record_hashes": result["record_hashes"],
+        "errors": sorted(final_errors),
+    }
+
+
+def _rooted_target_for_write(root: Path, relative: str, label: str) -> Path:
+    target = (root / relative).resolve()
+    try:
+        target.relative_to(root.resolve())
+    except ValueError as exc:
+        raise ProofError(f"{label} path escapes bundle root: {relative}") from exc
+    return target
 
 
 def load_json(path: Path) -> dict[str, Any]:

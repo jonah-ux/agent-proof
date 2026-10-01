@@ -62,12 +62,14 @@ jobs:
           .release-wheel/bin/python -m pip install dist/*.whl
           .release-wheel/bin/agent-proof --version
           .release-wheel/bin/agent-proof --help
+          .release-wheel/bin/python demos/demo.py
       - name: Verify source consumer
         run: |
           python -m venv .release-sdist
           .release-sdist/bin/python -m pip install dist/*.tar.gz
           .release-sdist/bin/agent-proof --version
           .release-sdist/bin/agent-proof --help
+          .release-sdist/bin/python demos/demo.py
       - name: Publish prerelease assets
         env:
           GH_TOKEN: ${{ github.token }}

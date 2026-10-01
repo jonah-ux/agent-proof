@@ -19,6 +19,7 @@ from .ledger import (
     merge_run,
     render_markdown,
     verification_output,
+    verify_bundle,
     verify_document,
     write_json,
 )
@@ -83,6 +84,19 @@ def parser() -> argparse.ArgumentParser:
     export.add_argument("path")
     export.add_argument("--out", required=True)
     export.add_argument("--artifact-root")
+
+    collect = commands.add_parser("collect", help="collect known sibling envelopes into a verified ledger")
+    collect.add_argument("--input", action="append", required=True, help="relative or absolute JSON envelope path; repeatable")
+    collect.add_argument("--run-id", required=True)
+    collect.add_argument("--actor", default="agent-proof-collect")
+    collect.add_argument("--artifact-root", required=True)
+    collect.add_argument("--out", default="ledger.json")
+
+    bundle_verify = commands.add_parser("verify-bundle", help="verify an exported bundle without its original artifact root")
+    bundle_verify.add_argument("path")
+    bundle_verify.add_argument("--require-observed", action="store_true")
+    bundle_verify.add_argument("--require-artifacts", action="store_true")
+    bundle_verify.add_argument("--max-bytes", type=int, default=64 * 1024 * 1024)
 
     return root
 
@@ -166,6 +180,30 @@ def main(argv: list[str] | None = None) -> int:
             output = export_bundle(document, result, _path(args.out), artifact_root=root)
             _print(output)
             return 0
+
+        if args.command == "collect":
+            from .ledger import collect_ledger
+
+            root = _path(args.artifact_root)
+            ledger, schemas = collect_ledger(
+                [_path(path) for path in args.input],
+                run_id=args.run_id,
+                actor=args.actor,
+                artifact_root=root,
+            )
+            write_json(_path(args.out), ledger)
+            _print({"schema": "agent-proof/collect/v2", "ok": True, "ledger": ledger, "input_count": len(schemas), "schemas": schemas})
+            return 0
+
+        if args.command == "verify-bundle":
+            result = verify_bundle(
+                _path(args.path),
+                require_observed=args.require_observed,
+                require_artifacts=args.require_artifacts,
+                max_bytes=args.max_bytes,
+            )
+            _print(result)
+            return 0 if result["ok"] else 1
 
         raise ProofError(f"unsupported command: {args.command}")
     except (ProofError, OSError, json.JSONDecodeError) as exc:

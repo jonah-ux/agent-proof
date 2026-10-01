@@ -1,6 +1,9 @@
 import copy
+import io
 import json
 from pathlib import Path
+import shutil
+import tarfile
 import tempfile
 import unittest
 
@@ -9,11 +12,14 @@ from agent_proof.ledger import (
     ProofError,
     append_record,
     build_record,
+    collect_ledger,
+    digest_json,
     export_bundle,
     make_ledger,
     merge_run,
     record_digest,
     verify_document,
+    verify_bundle,
     verification_output,
 )
 
@@ -113,6 +119,119 @@ class ProofLedgerTests(unittest.TestCase):
             self.assertIn("manifest.json", archive.getnames())
             manifest = json.load(archive.extractfile("manifest.json"))
         self.assertEqual(manifest["schema"], "agent-proof/export/v2")
+
+    def _make_bundle(self):
+        record = build_record(self.spec(), artifact_root=self.root)
+        ledger = append_record(make_ledger("run-1"), record, artifact_root=self.root)
+        run = merge_run(ledger, artifact_root=self.root)
+        bundle = self.root.parent / f"{self.root.name}-bundle.tar.gz"
+        export_bundle(run, verify_document(run, artifact_root=self.root), bundle, artifact_root=self.root)
+        return bundle, run
+
+    def _rewrite_bundle(self, source, target, mutate):
+        with tarfile.open(source, "r:gz") as archive:
+            members = []
+            for member in archive.getmembers():
+                payload = archive.extractfile(member).read() if member.isfile() else None
+                members.append((member, payload))
+        with tarfile.open(target, "w:gz") as archive:
+            for member, payload in members:
+                payload = mutate(member.name, payload)
+                if payload is None:
+                    archive.addfile(member)
+                    continue
+                member.size = len(payload)
+                archive.addfile(member, io.BytesIO(payload))
+
+    def test_bundle_verifies_without_original_artifact_root(self):
+        bundle, _ = self._make_bundle()
+        shutil.rmtree(self.root)
+        result = verify_bundle(bundle, require_observed=True, require_artifacts=True)
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["kind"], "bundle")
+        bundle.unlink()
+
+    def test_bundle_document_tamper_is_refused_even_when_manifest_is_rewritten(self):
+        bundle, run = self._make_bundle()
+        tampered = self.root.parent / f"{self.root.name}-tampered.tar.gz"
+
+        def mutate(name, payload):
+            if name != "proof/document.json":
+                return payload
+            document = json.loads(payload)
+            document["run_sha256"] = "0" * 64
+            tampered_doc = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False).encode() + b"\n"
+            return tampered_doc
+
+        self._rewrite_bundle(bundle, tampered, mutate)
+        # Even if an attacker rewrites the manifest input digest, the embedded run hash still fails.
+        manifest_tampered = self.root.parent / f"{self.root.name}-tampered-manifest.tar.gz"
+        with tarfile.open(tampered, "r:gz") as archive:
+            members = []
+            document = None
+            for member in archive.getmembers():
+                payload = archive.extractfile(member).read() if member.isfile() else None
+                if member.name == "proof/document.json":
+                    document = json.loads(payload)
+                members.append((member, payload))
+        with tarfile.open(manifest_tampered, "w:gz") as archive:
+            for member, payload in members:
+                if member.name == "manifest.json":
+                    manifest = json.loads(payload)
+                    manifest["input_sha256"] = digest_json(document)
+                    document_payload = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False).encode() + b"\n"
+                    for entry in manifest["entries"]:
+                        if entry.get("archive_path") == "proof/document.json":
+                            entry["size"] = len(document_payload)
+                            entry["sha256"] = __import__("hashlib").sha256(document_payload).hexdigest()
+                    payload = json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False).encode() + b"\n"
+                if payload is not None:
+                    member.size = len(payload)
+                    archive.addfile(member, io.BytesIO(payload))
+        result = verify_bundle(manifest_tampered)
+        self.assertFalse(result["ok"], result)
+        self.assertTrue(any("run_sha256" in error or "record" in error for error in result["errors"]))
+        bundle.unlink()
+        tampered.unlink()
+        manifest_tampered.unlink()
+
+    def test_bundle_path_traversal_and_symlink_are_refused(self):
+        traversal = self.root.parent / f"{self.root.name}-traversal.tar.gz"
+        with tarfile.open(traversal, "w:gz") as archive:
+            info = tarfile.TarInfo("../evil")
+            payload = b"bad"
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+        self.assertFalse(verify_bundle(traversal)["ok"])
+        symlink = self.root.parent / f"{self.root.name}-symlink.tar.gz"
+        with tarfile.open(symlink, "w:gz") as archive:
+            info = tarfile.TarInfo("manifest.json")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "../../etc/passwd"
+            archive.addfile(info)
+        self.assertFalse(verify_bundle(symlink)["ok"])
+        traversal.unlink()
+        symlink.unlink()
+
+    def test_collect_known_envelopes_in_deterministic_order(self):
+        sandbox = self.root / "sandbox.json"
+        evaluation = self.root / "evaluation.json"
+        sandbox.write_text(json.dumps({"schema": "agent-sandbox/v1", "ok": True, "backend": "fallback"}), encoding="utf-8")
+        evaluation.write_text(json.dumps({"schema": "agent-eval/v1", "ok": True, "exit_code": 0}), encoding="utf-8")
+        ledger, schemas = collect_ledger([evaluation, sandbox], run_id="collect-run", artifact_root=self.root)
+        self.assertEqual(schemas, ["agent-eval/v1", "agent-sandbox/v1"])
+        checked = verify_document(ledger, artifact_root=self.root)
+        self.assertTrue(checked["ok"], checked)
+        self.assertEqual([record["sources"][0]["path"] for record in ledger["records"]], ["evaluation.json", "sandbox.json"])
+        unknown = self.root / "unknown.json"
+        unknown.write_text(json.dumps({"schema": "unknown/v9"}), encoding="utf-8")
+        with self.assertRaises(ProofError):
+            collect_ledger([unknown], run_id="collect-run", artifact_root=self.root)
+
+    def test_cli_verify_bundle(self):
+        bundle, _ = self._make_bundle()
+        self.assertEqual(main(["verify-bundle", str(bundle), "--require-observed", "--require-artifacts"]), 0)
+        bundle.unlink()
 
     def test_cli_capture_and_verify(self):
         path = self.root / "capture.json"

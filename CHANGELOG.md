@@ -7,6 +7,10 @@
 - Added append-only hash-linked ledgers and self-contained run proofs.
 - Added independent verification for record, ledger, and run hashes, chain links,
   source envelopes, and referenced artifact bytes.
+- Added portable `verify-bundle` readback that validates gzip/tar safety, manifest
+  digests, and proof integrity after the original artifact root is removed.
+- Added deterministic `collect` for known policy, sandbox, evaluation, trace,
+  context, resume, and proof envelopes without storing their raw values.
 - Added deterministic Markdown rendering and tarball export.
 - Added a synthetic policy → sandbox → evaluation → proof workflow demo.
 
