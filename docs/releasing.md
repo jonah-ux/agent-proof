@@ -18,3 +18,21 @@ repository's governed route and verify the downloaded assets and checksums. A re
 independently proven until a fresh consumer can run `agent-proof verify-bundle --require-graph`
 against a bundle whose original artifact root is absent, receive `graph_state: "verified"`, and
 perform a source-bound `agent-proof verify-graph` readback.
+
+## Installed consumer gate
+
+The CI workflow also installs the built wheel and source archive into separate fresh environments and runs the installed `agent-proof` entry point. The local equivalent is:
+
+```bash
+python3 -m venv /tmp/agent-proof-wheel
+/tmp/agent-proof-wheel/bin/python -m pip install --no-deps dist/agent_proof-*.whl
+/tmp/agent-proof-wheel/bin/agent-proof --version
+/tmp/agent-proof-wheel/bin/agent-proof capture --out /tmp/agent-proof-wheel-capture.json
+
+python3 -m venv /tmp/agent-proof-sdist
+/tmp/agent-proof-sdist/bin/python -m pip install --no-deps dist/agent_proof-*.tar.gz
+/tmp/agent-proof-sdist/bin/agent-proof --version
+/tmp/agent-proof-sdist/bin/agent-proof capture --out /tmp/agent-proof-sdist-capture.json
+```
+
+This checks the distributed artifacts rather than only the source checkout. It still does not prove authorship, deployment, adoption, or a user-visible outcome without an explicit observed record.

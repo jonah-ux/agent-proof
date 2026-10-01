@@ -23,3 +23,21 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m agent_proof.cli --version
       - run: python demos/demo.py
+      - name: Verify installed wheel consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/agent-proof-wheel"
+          "$RUNNER_TEMP/agent-proof-wheel/bin/python" -m pip install --no-deps dist/agent_proof-*.whl
+          "$RUNNER_TEMP/agent-proof-wheel/bin/agent-proof" --version
+          "$RUNNER_TEMP/agent-proof-wheel/bin/agent-proof" --help
+          "$RUNNER_TEMP/agent-proof-wheel/bin/agent-proof" capture --out "$RUNNER_TEMP/agent-proof-capture.json"
+      - name: Verify installed sdist consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/agent-proof-sdist"
+          "$RUNNER_TEMP/agent-proof-sdist/bin/python" -m pip install --no-deps dist/agent_proof-*.tar.gz
+          "$RUNNER_TEMP/agent-proof-sdist/bin/agent-proof" --version
+          "$RUNNER_TEMP/agent-proof-sdist/bin/agent-proof" --help
+          "$RUNNER_TEMP/agent-proof-sdist/bin/agent-proof" capture --out "$RUNNER_TEMP/agent-proof-sdist-capture.json"
