@@ -5,6 +5,9 @@
 - Added redacted provenance graph embedding to deterministic `export/v2` bundles.
 - Added source-bound bundle graph readback and the explicit `--require-graph` gate,
   while keeping older bundles readable without the gate.
+- Added `agent-proof/interop/v1` normalization for policy, sandbox, evaluation, trace,
+  context-pack, resume, and proof envelopes, with allowlisted projections, explicit unknowns,
+  source-byte binding, and fail-closed `verify-interop` readback.
 
 ## 0.2.0 - 2026-10-01
 

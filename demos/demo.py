@@ -22,6 +22,7 @@ from agent_proof.ledger import (
     write_json,
 )
 from agent_proof.graph import graph_document, verify_graph
+from agent_proof.interop import normalize_envelope, verify_interop
 
 
 def main() -> int:
@@ -45,6 +46,10 @@ def main() -> int:
             sources / "eval.json",
             {"schema": "agent-eval/v1", "ok": True, "exit_code": 0, "expected_exit": 0},
         )
+        interop = normalize_envelope(sources / "eval.json", artifact_root=root)
+        interop_path = sources / "eval.interop.json"
+        write_json(interop_path, interop)
+        interop_verified = verify_interop(interop, artifact_root=root, require_input=True)
         spec = {
             "run_id": "demo-run",
             "actor": "synthetic-fixture",
@@ -106,7 +111,7 @@ def main() -> int:
 
         output = {
             "schema": "agent-proof/demo/v2",
-            "ok": before["ok"] and after["ok"] and not tampered["ok"] and bundle_verified["ok"] and not bundle_tampered["ok"],
+            "ok": before["ok"] and after["ok"] and not tampered["ok"] and bundle_verified["ok"] and not bundle_tampered["ok"] and interop_verified["ok"],
             "record_count": after["record_count"],
             "observed": after["observed"],
             "verified": after["ok"],
@@ -117,6 +122,8 @@ def main() -> int:
             "graph_verified": graph_bound["ok"],
             "graph_unbound_verified": graph_unbound["ok"],
             "graph_tamper_refused": not graph_tampered_result["ok"],
+            "interop_verified": interop_verified["ok"],
+            "interop_source_state": interop_verified["source_state"],
             "graph_node_count": graph["node_count"],
             "graph_edge_count": graph["edge_count"],
             "bundle_sha256": bundle["sha256"],
