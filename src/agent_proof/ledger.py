@@ -28,6 +28,7 @@ EXPORT_SCHEMA = "agent-proof/export/v2"
 COLLECT_SCHEMA = "agent-proof/collect/v2"
 BUNDLE_VERIFY_SCHEMA = "agent-proof/bundle-verify/v1"
 LEGACY_SCHEMA = "agent-proof/v1"
+GRAPH_ARCHIVE_PATH = "proof/graph.json"
 
 COLLECTABLE_SCHEMAS = {
     "agent-policy/v1": "policy decision",
@@ -730,6 +731,22 @@ def export_bundle(document: dict[str, Any], verification: dict[str, Any], output
     output.parent.mkdir(parents=True, exist_ok=True)
     proof_payload = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
     manifest["entries"].append({"archive_path": "proof/document.json", "size": len(proof_payload), "sha256": digest_bytes(proof_payload)})
+    graph_payload: bytes | None = None
+    graph_sha256: str | None = None
+    if document.get("schema") in {RECORD_SCHEMA, LEDGER_SCHEMA, RUN_SCHEMA}:
+        # Import lazily: graph.py intentionally depends on the ledger verifier.
+        from .graph import graph_document
+
+        graph = graph_document(
+            document,
+            artifact_root=artifact_root,
+            require_artifacts=verification.get("artifact_state") == "verified",
+        )
+        graph_payload = json.dumps(graph, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
+        graph_sha256 = graph["graph_sha256"]
+        manifest["graph_schema"] = graph["schema"]
+        manifest["graph_sha256"] = graph_sha256
+        manifest["entries"].append({"archive_path": GRAPH_ARCHIVE_PATH, "size": len(graph_payload), "sha256": digest_bytes(graph_payload)})
     artifact_payloads: list[tuple[str, bytes]] = []
     for index, item in enumerate(entries, 1):
         target = _rooted_file(artifact_root, item["path"], item["category"])
@@ -743,9 +760,19 @@ def export_bundle(document: dict[str, Any], verification: dict[str, Any], output
             with tarfile.open(fileobj=compressed, mode="w") as archive:
                 archive.addfile(_tar_bytes("manifest.json", manifest_payload), io.BytesIO(manifest_payload))
                 archive.addfile(_tar_bytes("proof/document.json", proof_payload), io.BytesIO(proof_payload))
+                if graph_payload is not None:
+                    archive.addfile(_tar_bytes(GRAPH_ARCHIVE_PATH, graph_payload), io.BytesIO(graph_payload))
                 for archive_path, payload in artifact_payloads:
                     archive.addfile(_tar_bytes(archive_path, payload), io.BytesIO(payload))
-    return {"schema": EXPORT_SCHEMA, "ok": True, "path": str(output), "entries": manifest["entries"], "sha256": digest_file(output)}
+    return {
+        "schema": EXPORT_SCHEMA,
+        "ok": True,
+        "path": str(output),
+        "entries": manifest["entries"],
+        "graph_state": "embedded" if graph_payload is not None else "absent",
+        "graph_sha256": graph_sha256,
+        "sha256": digest_file(output),
+    }
 
 
 def _safe_archive_name(value: Any, label: str) -> str:
@@ -768,6 +795,8 @@ def _bundle_failure(path: Path, errors: list[str], *, bundle_sha256: str | None 
         "bundle_sha256": bundle_sha256,
         "manifest_sha256": None,
         "document_sha256": None,
+        "graph_sha256": None,
+        "graph_state": "unknown",
         "kind": "bundle",
         "record_count": 0,
         "observed": False,
@@ -785,6 +814,7 @@ def verify_bundle(
     *,
     require_observed: bool = False,
     require_artifacts: bool = False,
+    require_graph: bool = False,
     max_bytes: int = 64 * 1024 * 1024,
 ) -> dict[str, Any]:
     """Verify an exported bundle without access to its original artifact root."""
@@ -857,12 +887,21 @@ def verify_bundle(
         errors.append("manifest input_schema does not match proof document")
     if manifest.get("input_sha256") != digest_json(document):
         errors.append("manifest input_sha256 does not match proof document")
+    declared_graph_sha256 = manifest.get("graph_sha256")
+    declared_graph_schema = manifest.get("graph_schema")
+    graph_declared = declared_graph_sha256 is not None or declared_graph_schema is not None
+    if graph_declared:
+        if not isinstance(declared_graph_sha256, str) or not _HEX64.fullmatch(declared_graph_sha256):
+            errors.append("manifest graph_sha256 is missing or malformed")
+        if not isinstance(declared_graph_schema, str) or not declared_graph_schema:
+            errors.append("manifest graph_schema is missing or malformed")
     entries = manifest.get("entries")
     if not isinstance(entries, list):
         errors.append("manifest entries must be a list")
         entries = []
     listed: set[str] = set()
     materialized: list[tuple[str, str, bytes]] = []
+    graph_payload: bytes | None = None
     for index, raw_entry in enumerate(entries):
         try:
             entry = _as_mapping(raw_entry, f"manifest.entries[{index}]")
@@ -879,6 +918,11 @@ def verify_bundle(
                 if entry.get("size") != len(document_payload):
                     raise ProofError("manifest proof/document.json size mismatch")
                 continue
+            if archive_path == GRAPH_ARCHIVE_PATH:
+                if entry.get("source_path") is not None:
+                    raise ProofError("manifest graph entry may not carry source_path")
+                graph_payload = payload
+                continue
             source_path = entry.get("source_path")
             category = archive_path.split("/", 1)[0] if "/" in archive_path else ""
             if category not in {"sources", "artifacts"} or source_path is None:
@@ -893,10 +937,37 @@ def verify_bundle(
         errors.extend(f"archive member is not listed in manifest: {name}" for name in extra)
     if "proof/document.json" not in listed:
         errors.append("manifest does not list proof/document.json")
+    if graph_declared and GRAPH_ARCHIVE_PATH not in listed:
+        errors.append("manifest graph_sha256 is declared but proof/graph.json is not listed")
+    if not graph_declared and GRAPH_ARCHIVE_PATH in listed:
+        errors.append("proof/graph.json is present without manifest graph_sha256")
+    if require_graph and not graph_declared:
+        errors.append("provenance graph is required")
     if errors:
         return _bundle_failure(bundle, sorted(errors), bundle_sha256=bundle_sha256) | {
             "manifest_sha256": manifest_sha256,
             "document_sha256": document_sha256,
+        }
+
+    graph_object: dict[str, Any] | None = None
+    graph_state = "absent"
+    if graph_payload is not None:
+        graph_state = "invalid"
+        try:
+            graph_object = _as_mapping(json.loads(graph_payload.decode("utf-8")), GRAPH_ARCHIVE_PATH)
+            if graph_object.get("schema") != declared_graph_schema:
+                raise ProofError("manifest graph_schema does not match proof/graph.json")
+            if graph_object.get("graph_sha256") != declared_graph_sha256:
+                raise ProofError("manifest graph_sha256 does not match proof/graph.json")
+            graph_state = "loaded"
+        except (UnicodeError, json.JSONDecodeError, ProofError) as exc:
+            errors.append(f"bundle graph JSON is invalid: {exc}")
+    if errors:
+        return _bundle_failure(bundle, sorted(errors), bundle_sha256=bundle_sha256) | {
+            "manifest_sha256": manifest_sha256,
+            "document_sha256": document_sha256,
+            "graph_sha256": declared_graph_sha256 if isinstance(declared_graph_sha256, str) else None,
+            "graph_state": graph_state,
         }
 
     try:
@@ -911,10 +982,24 @@ def verify_bundle(
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(payload)
             result = verify_document(document, artifact_root=root)
+            graph_result: dict[str, Any] | None = None
+            if graph_object is not None:
+                from .graph import verify_graph
+
+                graph_result = verify_graph(
+                    graph_object,
+                    document=document,
+                    artifact_root=root,
+                    require_input=True,
+                    require_observed=require_observed,
+                    require_artifacts=require_artifacts,
+                )
     except (OSError, ProofError) as exc:
         return _bundle_failure(bundle, [str(exc)], bundle_sha256=bundle_sha256) | {
             "manifest_sha256": manifest_sha256,
             "document_sha256": document_sha256,
+            "graph_sha256": declared_graph_sha256 if isinstance(declared_graph_sha256, str) else None,
+            "graph_state": "invalid",
         }
 
     final_errors = list(result["errors"])
@@ -922,6 +1007,9 @@ def verify_bundle(
         final_errors.append("observed result is required")
     if require_artifacts and result["artifact_state"] != "verified":
         final_errors.append("artifact verification is required")
+    if graph_result is not None:
+        graph_state = "verified" if graph_result["ok"] else "invalid"
+        final_errors.extend(f"graph: {error}" for error in graph_result["errors"])
     return {
         "schema": BUNDLE_VERIFY_SCHEMA,
         "ok": not final_errors,
@@ -930,6 +1018,8 @@ def verify_bundle(
         "bundle_sha256": bundle_sha256,
         "manifest_sha256": manifest_sha256,
         "document_sha256": document_sha256,
+        "graph_sha256": declared_graph_sha256 if isinstance(declared_graph_sha256, str) else None,
+        "graph_state": graph_state,
         "kind": "bundle",
         "record_count": result["record_count"],
         "observed": result["observed"],
