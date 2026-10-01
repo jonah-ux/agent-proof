@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .graph import graph_document, verify_graph
 from .ledger import (
     ProofError,
     append_record,
@@ -97,6 +98,21 @@ def parser() -> argparse.ArgumentParser:
     bundle_verify.add_argument("--require-observed", action="store_true")
     bundle_verify.add_argument("--require-artifacts", action="store_true")
     bundle_verify.add_argument("--max-bytes", type=int, default=64 * 1024 * 1024)
+
+    graph = commands.add_parser("graph", help="derive a deterministic provenance graph from a proof document")
+    graph.add_argument("path")
+    graph.add_argument("--artifact-root")
+    graph.add_argument("--require-observed", action="store_true")
+    graph.add_argument("--require-artifacts", action="store_true")
+    graph.add_argument("--out")
+
+    graph_verify = commands.add_parser("verify-graph", help="verify a provenance graph, optionally against its source")
+    graph_verify.add_argument("path")
+    graph_verify.add_argument("--input")
+    graph_verify.add_argument("--artifact-root")
+    graph_verify.add_argument("--require-input", action="store_true")
+    graph_verify.add_argument("--require-observed", action="store_true")
+    graph_verify.add_argument("--require-artifacts", action="store_true")
 
     return root
 
@@ -201,6 +217,45 @@ def main(argv: list[str] | None = None) -> int:
                 require_observed=args.require_observed,
                 require_artifacts=args.require_artifacts,
                 max_bytes=args.max_bytes,
+            )
+            _print(result)
+            return 0 if result["ok"] else 1
+
+        if args.command == "graph":
+            document = load_json(_path(args.path))
+            root = _path(args.artifact_root) if args.artifact_root else None
+            graph = graph_document(
+                document,
+                artifact_root=root,
+                require_observed=args.require_observed,
+                require_artifacts=args.require_artifacts,
+            )
+            if args.out:
+                output = _path(args.out)
+                write_json(output, graph)
+                _print({
+                    "schema": graph["schema"],
+                    "ok": True,
+                    "path": str(output),
+                    "graph_sha256": graph["graph_sha256"],
+                    "node_count": graph["node_count"],
+                    "edge_count": graph["edge_count"],
+                })
+            else:
+                _print(graph)
+            return 0
+
+        if args.command == "verify-graph":
+            graph = load_json(_path(args.path))
+            source = load_json(_path(args.input)) if args.input else None
+            root = _path(args.artifact_root) if args.artifact_root else None
+            result = verify_graph(
+                graph,
+                document=source,
+                artifact_root=root,
+                require_input=args.require_input,
+                require_observed=args.require_observed,
+                require_artifacts=args.require_artifacts,
             )
             _print(result)
             return 0 if result["ok"] else 1

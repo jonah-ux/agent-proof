@@ -3,8 +3,8 @@
 Run the full test suite, build wheel and sdist, install both in fresh environments, run the
 policy → sandbox → evaluation → proof demo, verify its tamper refusal, create an annotated tag
 through the approved repository route, publish wheel/source/checksum assets, then verify a fresh
-download. The demo must also report `bundle_verified: true` and `bundle_tamper_refused: true`
-after deleting its original fixture root.
+download. The demo must also report `bundle_verified: true`, `bundle_tamper_refused: true`,
+`graph_verified: true`, and `graph_tamper_refused: true` after deleting its original fixture root.
 
 ## Automated prerelease path
 
@@ -15,4 +15,5 @@ those assets. A normal push to `main` does not publish anything. Keep the releas
 complete the checks above, review the exact commit, then push the approved tag through the
 repository's governed route and verify the downloaded assets and checksums. A release is not
 independently proven until a fresh consumer can run `agent-proof verify-bundle` against a bundle
-whose original artifact root is absent.
+whose original artifact root is absent and can perform a source-bound `agent-proof verify-graph`
+readback.

@@ -30,7 +30,7 @@ artifact, and exports a deterministic tarball. It never reads local transcripts 
 Example result:
 
 ```json
-{"schema":"agent-proof/demo/v2","ok":true,"record_count":2,"observed":true,"verified":true,"tamper_refused":true}
+{"schema":"agent-proof/demo/v2","ok":true,"record_count":2,"observed":true,"verified":true,"tamper_refused":true,"bundle_verified":true,"graph_verified":true}
 ```
 
 ## Core workflow
@@ -138,6 +138,20 @@ Collection sorts relative paths, accepts only recognized `agent-*`/`context-pack
 only source sizes/digests/schema labels, and leaves observation unknown unless the source explicitly
 declares it. An unknown schema or malformed input refuses the complete collection.
 
+### 6. Derive and verify a provenance graph
+
+```console
+agent-proof graph run-proof.json --artifact-root ./run-files --require-observed --require-artifacts --out run-proof.graph.json
+agent-proof verify-graph run-proof.graph.json --input run-proof.json --artifact-root ./run-files --require-input --require-observed --require-artifacts
+```
+
+The graph is a deterministic, redacted view over a record, ledger, or merged run. It links the
+container claim to records, records to their predecessor, source blobs to the records they support,
+and records to the artifacts they produce. Reused bytes are one evidence node with sorted roles and
+paths. `verify-graph` can check the graph's own digest without the source, or bind it back to the
+original proof for an independent input readback. Graph hashes are separate from v2 record, ledger,
+and run hashes.
+
 ## Schemas
 
 | Schema | Purpose |
@@ -149,6 +163,8 @@ declares it. An unknown schema or malformed input refuses the complete collectio
 | `agent-proof/export/v2` | Export manifest inside a deterministic bundle |
 | `agent-proof/bundle-verify/v1` | Independent verification result for an exported bundle |
 | `agent-proof/collect/v2` | Collection command result wrapping a verified ledger |
+| `agent-proof/graph/v1` | Deterministic provenance graph derived from a v2 proof document |
+| `agent-proof/graph-verify/v1` | Structural and optional source-bound graph verification result |
 
 Sibling outputs are treated as evidence files, not instructions. The demo and tests exercise
 `agent-policy/v1`, `agent-sandbox/v1`, and `agent-eval/v1`; adapters remain optional because the

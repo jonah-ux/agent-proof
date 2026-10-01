@@ -11,6 +11,8 @@
   digests, and proof integrity after the original artifact root is removed.
 - Added deterministic `collect` for known policy, sandbox, evaluation, trace,
   context, resume, and proof envelopes without storing their raw values.
+- Added deterministic provenance graphs with separate graph hashes, typed
+  container/record/evidence nodes, source-bound readback, and unbound-state gates.
 - Added deterministic Markdown rendering and tarball export.
 - Added a synthetic policy → sandbox → evaluation → proof workflow demo.
 

@@ -21,6 +21,7 @@ from agent_proof.ledger import (
     verify_document,
     write_json,
 )
+from agent_proof.graph import graph_document, verify_graph
 
 
 def main() -> int:
@@ -73,6 +74,15 @@ def main() -> int:
         tampered = verify_document(run, artifact_root=root)
         artifact.write_text(original, encoding="utf-8")
         after = verify_document(run, artifact_root=root)
+        graph = graph_document(run, artifact_root=root, require_observed=True, require_artifacts=True)
+        graph_bound = verify_graph(
+            graph,
+            document=run,
+            artifact_root=root,
+            require_input=True,
+            require_observed=True,
+            require_artifacts=True,
+        )
         bundle_path = Path(directory) / "agent-proof-demo.tar.gz"
         bundle = export_bundle(run, after, bundle_path, artifact_root=root)
         shutil.rmtree(root)
@@ -89,6 +99,10 @@ def main() -> int:
                     member.size = len(payload)
                     tampered_archive.addfile(member, io.BytesIO(payload))
         bundle_tampered = verify_bundle(tampered_bundle_path)
+        graph_unbound = verify_graph(graph)
+        graph_tampered = dict(graph)
+        graph_tampered["run_id"] = "tampered"
+        graph_tampered_result = verify_graph(graph_tampered)
 
         output = {
             "schema": "agent-proof/demo/v2",
@@ -99,6 +113,11 @@ def main() -> int:
             "tamper_refused": not tampered["ok"],
             "bundle_verified": bundle_verified["ok"],
             "bundle_tamper_refused": not bundle_tampered["ok"],
+            "graph_verified": graph_bound["ok"],
+            "graph_unbound_verified": graph_unbound["ok"],
+            "graph_tamper_refused": not graph_tampered_result["ok"],
+            "graph_node_count": graph["node_count"],
+            "graph_edge_count": graph["edge_count"],
             "bundle_sha256": bundle["sha256"],
             "markdown_preview": render_markdown(run, verification_output(after)).splitlines()[:6],
         }
