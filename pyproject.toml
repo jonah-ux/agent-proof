@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent_proof"
-version = "0.1.1"
-description = "evidence bundle builder"
+version = "0.2.0"
+description = "tamper-evident, hash-linked evidence ledgers for agent workflows"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
