@@ -62,3 +62,22 @@ and document digest remain visible in `agent-proof/bundle-verify/v1`.
 `collect` is a schema-aware adapter for known sibling outputs. It creates one record per input in
 relative-path order and stores source digests rather than raw envelope values. It never infers
 observation from a generic `ok` field: missing explicit observation becomes an `unknowns` entry.
+
+## Provenance graph
+
+`agent-proof/graph/v1` is a derived, deterministic view over one `record/v2`, `ledger/v2`, or
+`run/v2` document. The graph records the input document digest and its self-hash as separate
+claims, then emits sorted nodes and edges:
+
+- one `container:<sha256>` node for the input record, ledger, or run;
+- `record:<sha256>` nodes with sequence, predecessor, observation, and unknown state;
+- deduplicated `blob:<sha256>` evidence nodes with sorted source/artifact roles, relative paths,
+  and source schemas;
+- `contains`, `continues`, `supports`, and `produces` edges with fixed directions and roles.
+
+The graph does not copy command output, environment values, or operation working directories. It
+has its own `graph_sha256`; changing a graph does not rewrite a v2 proof hash. A source-bound
+`verify-graph --input` run re-derives the graph and compares the complete representation. An
+unbound readback checks only the graph structure and marks `input_not_bound` as an unknown; the
+`--require-input`, `--require-observed`, and `--require-artifacts` gates require a source-bound
+readback.
