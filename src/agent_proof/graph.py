@@ -373,10 +373,14 @@ def verify_graph(
             errors.append(f"edges[{index}] continues edge does not match target prev_sha256")
         if kind == "supports" and source is not None and edge.get("path") not in source.get("paths", []):
             errors.append(f"edges[{index}] source path is not present on the evidence node")
+        if kind == "supports" and source is not None and edge.get("role") not in source.get("roles", []):
+            errors.append(f"edges[{index}] source role is not present on the evidence node")
         if kind == "supports" and source is not None and edge.get("schema") is not None and edge.get("schema") not in source.get("schemas", []):
             errors.append(f"edges[{index}] source schema is not present on the evidence node")
         if kind == "produces" and source is not None and edge.get("path") not in nodes_by_id.get(edge.get("to"), {}).get("paths", []):
             errors.append(f"edges[{index}] artifact path is not present on the evidence node")
+        if kind == "produces" and target is not None and edge.get("role") not in target.get("roles", []):
+            errors.append(f"edges[{index}] artifact role is not present on the evidence node")
         key = _edge_key(edge)
         if key in edge_keys:
             errors.append(f"duplicate graph edge: {key}")
