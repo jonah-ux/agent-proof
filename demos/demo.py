@@ -86,7 +86,7 @@ def main() -> int:
         bundle_path = Path(directory) / "agent-proof-demo.tar.gz"
         bundle = export_bundle(run, after, bundle_path, artifact_root=root)
         shutil.rmtree(root)
-        bundle_verified = verify_bundle(bundle_path, require_observed=True, require_artifacts=True)
+        bundle_verified = verify_bundle(bundle_path, require_observed=True, require_artifacts=True, require_graph=True)
         tampered_bundle_path = Path(directory) / "agent-proof-demo-tampered.tar.gz"
         with tarfile.open(bundle_path, "r:gz") as archive, tarfile.open(tampered_bundle_path, "w:gz") as tampered_archive:
             for member in archive.getmembers():
@@ -112,6 +112,7 @@ def main() -> int:
             "verified": after["ok"],
             "tamper_refused": not tampered["ok"],
             "bundle_verified": bundle_verified["ok"],
+            "bundle_graph_verified": bundle_verified.get("graph_state") == "verified",
             "bundle_tamper_refused": not bundle_tampered["ok"],
             "graph_verified": graph_bound["ok"],
             "graph_unbound_verified": graph_unbound["ok"],

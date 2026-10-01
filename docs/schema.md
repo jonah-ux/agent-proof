@@ -47,17 +47,22 @@ unobserved or partial.
 ## Export bundles and independent readback
 
 `export_bundle` writes `agent-proof/export/v2` as a deterministic gzip/tar. The archive contains
-`manifest.json`, `proof/document.json`, and source/artifact bytes. Manifest entries identify the
-archive path, source-relative path where applicable, byte size, and SHA-256. The current export
-contract infers the source category from the `sources/` or `artifacts/` archive prefix; it does not
-add a second category field to the manifest.
+`manifest.json`, `proof/document.json`, a redacted `proof/graph.json` for v2 record/ledger/run
+documents, and source/artifact bytes. Manifest entries identify the archive path, source-relative
+path where applicable, byte size, and SHA-256. The optional `graph_schema` and `graph_sha256`
+manifest fields bind the graph entry to the proof container without copying raw output or
+environment values. The current export contract infers the source category from the `sources/`
+or `artifacts/` archive prefix; it does not add a second category field to the manifest.
 
 `verify-bundle` reads the archive without trusting tar extraction. It rejects absolute paths, `..`
 components, backslashes, duplicate names, symlinks, hard links, devices, FIFOs, unlisted members,
 and size-limit violations. It checks the manifest's document schema and canonical `input_sha256`,
-then materializes only declared files into a temporary root and calls the existing v2 verifier.
-The temporary root is removed before the result is returned. The bundle digest, manifest digest,
-and document digest remain visible in `agent-proof/bundle-verify/v1`.
+then materializes only declared files into a temporary root and calls the existing v2 verifier. If
+`proof/graph.json` is present, it checks the graph digest and source-binds it to the embedded proof
+with the same temporary root. `--require-graph` refuses a legacy bundle that does not carry this
+portable graph. The temporary root is removed before the result is returned. The bundle digest,
+manifest digest, document digest, graph digest, and graph state remain visible in
+`agent-proof/bundle-verify/v1`.
 
 `collect` is a schema-aware adapter for known sibling outputs. It creates one record per input in
 relative-path order and stores source digests rather than raw envelope values. It never infers

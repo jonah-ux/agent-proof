@@ -30,7 +30,7 @@ artifact, and exports a deterministic tarball. It never reads local transcripts 
 Example result:
 
 ```json
-{"schema":"agent-proof/demo/v2","ok":true,"record_count":2,"observed":true,"verified":true,"tamper_refused":true,"bundle_verified":true,"graph_verified":true}
+{"schema":"agent-proof/demo/v2","ok":true,"record_count":2,"observed":true,"verified":true,"tamper_refused":true,"bundle_verified":true,"bundle_graph_verified":true,"graph_verified":true}
 ```
 
 ## Core workflow
@@ -107,22 +107,24 @@ agent-proof export run-proof.json --artifact-root ./run-files --out run-proof.ta
 ```
 
 The Markdown view is deterministic and includes record hashes, observation state, partial state,
-and unknowns. The tarball contains the proof document, a manifest, and every referenced source or
-artifact under controlled archive names. Its gzip and tar metadata are normalized for repeatable
-digests.
+and unknowns. The tarball contains the proof document, a manifest, a redacted provenance graph,
+and every referenced source or artifact under controlled archive names. Its gzip and tar metadata
+are normalized for repeatable digests.
 
 ### 5. Verify a bundle after the source workspace is gone
 
 ```console
-agent-proof verify-bundle run-proof.tar.gz --require-observed --require-artifacts
+agent-proof verify-bundle run-proof.tar.gz --require-observed --require-artifacts --require-graph
 ```
 
 `verify-bundle` is the independent readback path for `export/v2`. It checks the raw gzip/tar
 structure, rejects traversal, links, devices, duplicate members, unlisted files, and oversized
 payloads, validates every manifest size and digest, and materializes only the declared source and
-artifact bytes into a temporary private root. It then reuses the normal record, ledger, or run
-verifier and deletes that temporary root before returning. The original checkout and artifact
-root are not needed.
+artifact bytes into a temporary private root. New exports also carry the redacted
+`proof/graph.json` view with its own graph digest; `--require-graph` source-binds that graph back
+to the embedded proof and fails closed when the graph is missing or changed. Older `export/v2`
+bundles remain readable without the graph gate. The original checkout and artifact root are not
+needed.
 
 Known sibling envelopes can be collected into the same ledger without importing their raw values:
 

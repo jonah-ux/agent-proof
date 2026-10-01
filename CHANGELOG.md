@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added redacted provenance graph embedding to deterministic `export/v2` bundles.
+- Added source-bound bundle graph readback and the explicit `--require-graph` gate,
+  while keeping older bundles readable without the gate.
+
 ## 0.2.0 - 2026-10-01
 
 - Added redacted `agent-proof/record/v2` evidence records with canonical hashes,

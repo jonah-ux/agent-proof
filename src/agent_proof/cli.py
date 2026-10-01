@@ -97,6 +97,7 @@ def parser() -> argparse.ArgumentParser:
     bundle_verify.add_argument("path")
     bundle_verify.add_argument("--require-observed", action="store_true")
     bundle_verify.add_argument("--require-artifacts", action="store_true")
+    bundle_verify.add_argument("--require-graph", action="store_true")
     bundle_verify.add_argument("--max-bytes", type=int, default=64 * 1024 * 1024)
 
     graph = commands.add_parser("graph", help="derive a deterministic provenance graph from a proof document")
@@ -216,6 +217,7 @@ def main(argv: list[str] | None = None) -> int:
                 _path(args.path),
                 require_observed=args.require_observed,
                 require_artifacts=args.require_artifacts,
+                require_graph=args.require_graph,
                 max_bytes=args.max_bytes,
             )
             _print(result)
