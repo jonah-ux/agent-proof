@@ -21,6 +21,12 @@ JSON operation spec
         +--> redacted provenance graph
                    |
                    +--> optional source-bound verification
+
+        sibling JSON envelope
+                   |
+                   +--> loss-aware interop normalization
+                              |
+                              +--> source-bound projection readback
 ```
 
 ## Ownership boundaries
@@ -29,6 +35,7 @@ JSON operation spec
 - **Ledger and run verification** (`verify_record`, `verify_ledger`, `verify_run`, `verify_document`) recompute canonical hashes, sequence links, repository identity, and file digests. These functions decide byte integrity; they do not infer that a user-visible outcome occurred.
 - **Bundle export and readback** (`export_bundle`, `verify_bundle`) own the archive boundary. Export writes normalized tar metadata. Readback validates member names and types, size limits, manifest coverage, digests, and only then materializes a private temporary artifact root for the normal verifier.
 - **Graph derivation and verification** (`graph_document`, `verify_graph`) expose relationships between the proof container, records, source blobs, and artifacts. Graph verification can run unbound or bind back to the original proof document.
+- **Interoperability normalization** (`normalize_envelope`, `verify_interop`) is the reviewed handoff boundary for sibling JSON envelopes. It projects only allowlisted scalar signals and hashed identity fields, preserves omitted fields as unknowns, and can regenerate the projection from the source bytes. It does not infer a user-visible outcome.
 - **CLI orchestration** (`cli.py`) translates arguments into these domain operations and emits stable JSON. It does not implement a second verification path.
 
 The large verification functions are intentionally orchestration-heavy because each one represents a trust boundary with ordered refusal checks. Future extraction should preserve those boundaries and stable error contracts; splitting by line count alone would make the security review harder.
@@ -42,6 +49,7 @@ The large verification functions are intentionally orchestration-heavy because e
 5. Source and artifact paths are relative to an explicit root and cannot traverse symlinks.
 6. Bundle verification must work after the original checkout and artifact root are gone.
 7. A graph is a derived, redacted view; it cannot silently replace the proof it claims to describe.
+8. An interoperability envelope is source-bound only when its declared source path, bytes, and regenerated projection all match; an unbound envelope stays explicitly unknown.
 
 ## Failure model
 

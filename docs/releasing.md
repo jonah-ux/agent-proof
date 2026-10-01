@@ -1,10 +1,11 @@
 # Releasing
 
 Run the full test suite, build wheel and sdist, install both in fresh environments, run the
-policy → sandbox → evaluation → proof demo, verify its tamper refusal, create an annotated tag
+policy → sandbox → evaluation → proof → interoperability demo, verify its tamper refusal, create an annotated tag
 through the approved repository route, publish wheel/source/checksum assets, then verify a fresh
 download. The demo must also report `bundle_verified: true`, `bundle_tamper_refused: true`,
-`graph_verified: true`, `graph_tamper_refused: true`, and `bundle_graph_verified: true` after
+`graph_verified: true`, `graph_tamper_refused: true`, `bundle_graph_verified: true`, and
+`interop_verified: true` after
 deleting its original fixture root.
 
 ## Automated prerelease path
@@ -17,7 +18,7 @@ complete the checks above, review the exact commit, then push the approved tag t
 repository's governed route and verify the downloaded assets and checksums. A release is not
 independently proven until a fresh consumer can run `agent-proof verify-bundle --require-graph`
 against a bundle whose original artifact root is absent, receive `graph_state: "verified"`, and
-perform a source-bound `agent-proof verify-graph` readback.
+perform source-bound `agent-proof verify-graph` and `agent-proof verify-interop` readbacks.
 
 ## Installed consumer gate
 

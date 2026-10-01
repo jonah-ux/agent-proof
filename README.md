@@ -30,7 +30,7 @@ artifact, and exports a deterministic tarball. It never reads local transcripts 
 Example result:
 
 ```json
-{"schema":"agent-proof/demo/v2","ok":true,"record_count":2,"observed":true,"verified":true,"tamper_refused":true,"bundle_verified":true,"bundle_graph_verified":true,"graph_verified":true}
+{"schema":"agent-proof/demo/v2","ok":true,"record_count":2,"observed":true,"verified":true,"tamper_refused":true,"bundle_verified":true,"bundle_graph_verified":true,"graph_verified":true,"interop_verified":true,"interop_source_state":"verified"}
 ```
 
 ## Core workflow
@@ -140,7 +140,28 @@ Collection sorts relative paths, accepts only recognized `agent-*`/`context-pack
 only source sizes/digests/schema labels, and leaves observation unknown unless the source explicitly
 declares it. An unknown schema or malformed input refuses the complete collection.
 
-### 6. Derive and verify a provenance graph
+### 6. Normalize a sibling envelope without losing unknowns
+
+The optional interoperability adapter gives policy, sandbox, evaluation, trace, context-pack,
+resume, and Agent Proof envelopes one loss-aware handoff contract. It stores the source byte
+digest, source schema, adapter kind, hashed identity fields, and a small allowlisted projection of
+status and metrics. Missing fields remain explicit unknowns; raw source values never cross the
+boundary.
+
+```console
+agent-proof normalize ./run-files/evaluation.json \
+  --artifact-root ./run-files --out ./run-files/evaluation.interop.json
+agent-proof verify-interop ./run-files/evaluation.interop.json \
+  --artifact-root ./run-files --require-input
+```
+
+`verify-interop` can also verify the envelope's own canonical hash without a source root, but that
+result is marked `source_not_bound` and cannot establish that the source file still matches. A
+changed source, changed normalized projection, unsupported adapter, malformed scalar, or symlinked
+input fails closed. This adapter is an import boundary, not an outcome oracle: an intact envelope
+with `observed: null` or explicit unknowns remains unknown.
+
+### 7. Derive and verify a provenance graph
 
 ```console
 agent-proof graph run-proof.json --artifact-root ./run-files --require-observed --require-artifacts --out run-proof.graph.json
@@ -167,6 +188,8 @@ and run hashes.
 | `agent-proof/collect/v2` | Collection command result wrapping a verified ledger |
 | `agent-proof/graph/v1` | Deterministic provenance graph derived from a v2 proof document |
 | `agent-proof/graph-verify/v1` | Structural and optional source-bound graph verification result |
+| `agent-proof/interop/v1` | Redacted, loss-aware normalized envelope for known sibling tools |
+| `agent-proof/interop-verify/v1` | Source-bound or unbound interoperability verification result |
 
 Sibling outputs are treated as evidence files, not instructions. The demo and tests exercise
 `agent-policy/v1`, `agent-sandbox/v1`, and `agent-eval/v1`; adapters remain optional because the

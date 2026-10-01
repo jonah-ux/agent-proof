@@ -41,6 +41,7 @@ COLLECTABLE_SCHEMAS = {
     RECORD_SCHEMA: "proof record",
     LEDGER_SCHEMA: "proof ledger",
     RUN_SCHEMA: "proof run",
+    "agent-proof/interop/v1": "normalized interoperability envelope",
 }
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -321,6 +322,26 @@ def _source_result(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(coverage, dict) and coverage.get("status") not in (None, "complete"):
         partial = True
         unknowns.append("source_coverage_partial")
+    if payload.get("schema") == "agent-proof/interop/v1":
+        # A normalized envelope is itself a reviewed source contract.  Reuse
+        # only its explicit nested status and carry its loss-aware unknowns;
+        # arbitrary nested keys are never interpreted by collect.
+        projection = payload.get("projection")
+        status = projection.get("status") if isinstance(projection, dict) else None
+        if isinstance(status, dict):
+            if isinstance(status.get("observed"), bool):
+                observed = status["observed"]
+            else:
+                unknowns.append("interop_observation_unknown")
+            if isinstance(status.get("partial"), bool):
+                partial = partial or status["partial"]
+            else:
+                unknowns.append("interop_partial_unknown")
+            if status.get("ok") is False:
+                unknowns.append("source_reported_failure")
+        declared_unknowns = payload.get("unknowns")
+        if isinstance(declared_unknowns, list):
+            unknowns.extend(item for item in declared_unknowns if isinstance(item, str))
     exit_code = payload.get("exit_code") if isinstance(payload.get("exit_code"), int) else None
     duration_ms = payload.get("duration_ms") if isinstance(payload.get("duration_ms"), int) else None
     return {
@@ -366,6 +387,12 @@ def collect_ledger(
         schema = payload.get("schema")
         if schema not in COLLECTABLE_SCHEMAS:
             raise ProofError(f"unsupported collect input schema for {relative}: {schema!r}")
+        if schema == "agent-proof/interop/v1":
+            from .interop import verify_interop
+
+            interop_result = verify_interop(payload, artifact_root=root, require_input=True)
+            if not interop_result["ok"]:
+                raise ProofError("invalid normalized interoperability input: " + "; ".join(interop_result["errors"]))
         collected_schemas.append(schema)
         spec = {
             "run_id": run_id,

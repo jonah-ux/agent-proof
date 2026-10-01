@@ -9,6 +9,7 @@ from typing import Any
 
 from . import __version__
 from .graph import graph_document, verify_graph
+from .interop import normalize_envelope, verify_interop
 from .ledger import (
     ProofError,
     append_record,
@@ -92,6 +93,23 @@ def parser() -> argparse.ArgumentParser:
     collect.add_argument("--actor", default="agent-proof-collect")
     collect.add_argument("--artifact-root", required=True)
     collect.add_argument("--out", default="ledger.json")
+
+    normalize = commands.add_parser(
+        "normalize",
+        help="normalize one known sibling envelope into a redacted interoperability contract",
+    )
+    normalize.add_argument("input", help="sibling JSON envelope")
+    normalize.add_argument("--artifact-root", required=True)
+    normalize.add_argument("--out", default="interop.json")
+
+    interop_verify = commands.add_parser(
+        "verify-interop",
+        help="verify a normalized envelope, optionally against its source file",
+    )
+    interop_verify.add_argument("path", help="agent-proof/interop/v1 JSON envelope")
+    interop_verify.add_argument("--input", help="source sibling JSON envelope; defaults to the declared source path")
+    interop_verify.add_argument("--artifact-root")
+    interop_verify.add_argument("--require-input", action="store_true")
 
     bundle_verify = commands.add_parser("verify-bundle", help="verify an exported bundle without its original artifact root")
     bundle_verify.add_argument("path")
@@ -211,6 +229,25 @@ def main(argv: list[str] | None = None) -> int:
             write_json(_path(args.out), ledger)
             _print({"schema": "agent-proof/collect/v2", "ok": True, "ledger": ledger, "input_count": len(schemas), "schemas": schemas})
             return 0
+
+        if args.command == "normalize":
+            normalized = normalize_envelope(_path(args.input), artifact_root=_path(args.artifact_root))
+            write_json(_path(args.out), normalized)
+            _print(normalized)
+            return 0
+
+        if args.command == "verify-interop":
+            normalized = load_json(_path(args.path))
+            root = _path(args.artifact_root) if args.artifact_root else None
+            source = _path(args.input) if args.input else None
+            result = verify_interop(
+                normalized,
+                artifact_root=root,
+                source_path=source,
+                require_input=args.require_input,
+            )
+            _print(result)
+            return 0 if result["ok"] else 1
 
         if args.command == "verify-bundle":
             result = verify_bundle(
