@@ -60,11 +60,13 @@ jobs:
         run: |
           python -m venv .release-wheel
           .release-wheel/bin/python -m pip install dist/*.whl
+          .release-wheel/bin/agent-proof --version
           .release-wheel/bin/agent-proof --help
       - name: Verify source consumer
         run: |
           python -m venv .release-sdist
           .release-sdist/bin/python -m pip install dist/*.tar.gz
+          .release-sdist/bin/agent-proof --version
           .release-sdist/bin/agent-proof --help
       - name: Publish prerelease assets
         env:
