@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import io
 from pathlib import Path
+import shutil
+import tarfile
 import tempfile
 
 from agent_proof.ledger import (
@@ -14,6 +17,7 @@ from agent_proof.ledger import (
     merge_run,
     render_markdown,
     verification_output,
+    verify_bundle,
     verify_document,
     write_json,
 )
@@ -21,7 +25,8 @@ from agent_proof.ledger import (
 
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="agent-proof-demo-") as directory:
-        root = Path(directory)
+        root = Path(directory) / "fixtures"
+        root.mkdir()
         sources = root / "sources"
         sources.mkdir()
         artifact = root / "result.txt"
@@ -68,15 +73,32 @@ def main() -> int:
         tampered = verify_document(run, artifact_root=root)
         artifact.write_text(original, encoding="utf-8")
         after = verify_document(run, artifact_root=root)
-        bundle = export_bundle(run, after, root / "agent-proof-demo.tar.gz", artifact_root=root)
+        bundle_path = Path(directory) / "agent-proof-demo.tar.gz"
+        bundle = export_bundle(run, after, bundle_path, artifact_root=root)
+        shutil.rmtree(root)
+        bundle_verified = verify_bundle(bundle_path, require_observed=True, require_artifacts=True)
+        tampered_bundle_path = Path(directory) / "agent-proof-demo-tampered.tar.gz"
+        with tarfile.open(bundle_path, "r:gz") as archive, tarfile.open(tampered_bundle_path, "w:gz") as tampered_archive:
+            for member in archive.getmembers():
+                payload = archive.extractfile(member).read() if member.isfile() else None
+                if member.name.startswith("artifacts/"):
+                    payload = b"tampered artifact\n"
+                if payload is None:
+                    tampered_archive.addfile(member)
+                else:
+                    member.size = len(payload)
+                    tampered_archive.addfile(member, io.BytesIO(payload))
+        bundle_tampered = verify_bundle(tampered_bundle_path)
 
         output = {
             "schema": "agent-proof/demo/v2",
-            "ok": before["ok"] and after["ok"] and not tampered["ok"],
+            "ok": before["ok"] and after["ok"] and not tampered["ok"] and bundle_verified["ok"] and not bundle_tampered["ok"],
             "record_count": after["record_count"],
             "observed": after["observed"],
             "verified": after["ok"],
             "tamper_refused": not tampered["ok"],
+            "bundle_verified": bundle_verified["ok"],
+            "bundle_tamper_refused": not bundle_tampered["ok"],
             "bundle_sha256": bundle["sha256"],
             "markdown_preview": render_markdown(run, verification_output(after)).splitlines()[:6],
         }
