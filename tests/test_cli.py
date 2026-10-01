@@ -195,6 +195,22 @@ class ProofLedgerTests(unittest.TestCase):
         tampered.unlink()
         manifest_tampered.unlink()
 
+    def test_bundle_invalid_utf8_is_refused_as_structured_error(self):
+        bundle, _ = self._make_bundle()
+        invalid = self.root.parent / f"{self.root.name}-invalid-utf8.tar.gz"
+
+        def mutate(name, payload):
+            if name == "manifest.json":
+                return b"\xff\xfe"
+            return payload
+
+        self._rewrite_bundle(bundle, invalid, mutate)
+        result = verify_bundle(invalid)
+        self.assertFalse(result["ok"], result)
+        self.assertTrue(any("bundle JSON is invalid" in error for error in result["errors"]))
+        bundle.unlink()
+        invalid.unlink()
+
     def test_bundle_path_traversal_and_symlink_are_refused(self):
         traversal = self.root.parent / f"{self.root.name}-traversal.tar.gz"
         with tarfile.open(traversal, "w:gz") as archive:

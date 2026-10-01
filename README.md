@@ -19,8 +19,8 @@ result happened. `observed`, `partial`, and `unknowns` remain explicit in every 
 ## Try the complete workflow
 
 ```console
-python -m pip install git+https://github.com/jonah-ux/agent-proof.git@main
-python demos/demo.py
+python3 -m pip install git+https://github.com/jonah-ux/agent-proof.git@main
+python3 demos/demo.py
 ```
 
 The synthetic demo composes policy, sandbox, and evaluation JSON envelopes, creates two linked
@@ -190,7 +190,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
 PYTHONPATH=src python -m unittest discover -s tests -v
-PYTHONPATH=src python demos/demo.py
+PYTHONPATH=src python3 demos/demo.py
 python -m build --sdist --wheel
 ```
 
