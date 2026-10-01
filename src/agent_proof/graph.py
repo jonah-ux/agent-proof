@@ -354,7 +354,7 @@ def verify_graph(
             errors.append(f"edges[{index}] sequence is invalid")
         if kind in {"supports", "produces"} and (not isinstance(edge.get("path"), str) or not edge["path"]):
             errors.append(f"edges[{index}] path is missing")
-            
+
         if kind in {"supports", "produces"} and isinstance(edge.get("path"), str):
             try:
                 _safe_relative(edge["path"], f"edges[{index}].path")
