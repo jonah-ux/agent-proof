@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 - 2026-10-02
+
+- Reissued the context-integrity interoperability release through the annotated-tag workflow.
+- Kept the installed CLI version, package metadata, and release identity aligned.
+
 ## Unreleased
 
 - Added redacted provenance graph embedding to deterministic `export/v2` bundles.
