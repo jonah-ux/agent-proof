@@ -14,6 +14,7 @@
 - Added a reviewed `context-integrity/v1` interoperability adapter and collectable schema,
   preserving scoped identity as digests, citation counts as bounded metrics, and answer text
   outside the normalized envelope.
+- Aligned the installed `agent-proof --version` entry point with the 0.3.0 package release.
 
 ## 0.2.0 - 2026-10-01
 
