@@ -69,14 +69,52 @@ class InteroperabilityTests(unittest.TestCase):
             "agent-trace/v1": "trace",
             "context-pack/v1": "context",
             "agent-resume/v1": "resume",
+            "context-integrity/v1": "context-integrity",
         }
         for index, (schema, stem) in enumerate(fixtures.items()):
-            source = self._write(f"{stem}.json", {"schema": schema, "ok": index % 2 == 0})
+            payload = {"schema": schema, "ok": index % 2 == 0}
+            if schema == "context-integrity/v1":
+                payload.update(
+                    {
+                        "person_id": "private-person",
+                        "project_id": "private-project",
+                        "citation_count": 2,
+                        "answer": "private answer text",
+                    }
+                )
+            source = self._write(f"{stem}.json", payload)
             normalized = normalize_envelope(source, artifact_root=self.root)
             self.assertEqual(normalized["source"]["schema"], schema)
             self.assertIn("observed_not_declared", normalized["unknowns"])
             self.assertIn("partial_not_declared", normalized["unknowns"])
             self.assertEqual(verify_interop(normalized)["source_state"], "unbound")
+
+    def test_context_integrity_adapter_preserves_scope_and_redacts_answer(self):
+        source = self._write(
+            "context-integrity.json",
+            {
+                "schema": "context-integrity/v1",
+                "status": "supported",
+                "ok": True,
+                "observed": True,
+                "partial": False,
+                "timed_out": False,
+                "person_id": "private-person",
+                "project_id": "private-project",
+                "citation_count": 1,
+                "answer": "private answer text",
+                "citations": [{"record_id": "private-record"}],
+                "unknowns": [],
+            },
+        )
+        normalized = normalize_envelope(source, artifact_root=self.root)
+        self.assertEqual(normalized["adapter"]["kind"], "context-integrity")
+        self.assertEqual(normalized["projection"]["metrics"], {"citation_count": 1})
+        self.assertEqual(set(normalized["projection"]["identity"]), {"person_id_sha256", "project_id_sha256"})
+        encoded = json.dumps(normalized, sort_keys=True)
+        self.assertNotIn("private answer text", encoded)
+        self.assertNotIn("private-person", encoded)
+        self.assertTrue(verify_interop(normalized, artifact_root=self.root, require_input=True)["ok"])
 
     def test_source_tamper_and_projection_tamper_fail_closed(self):
         source = self._write(
@@ -128,6 +166,12 @@ class InteroperabilityTests(unittest.TestCase):
         source = self._write(
             "context.json",
             {"schema": "context-pack/v1", "pack_id": "pack-1", "ok": True, "observed": True, "partial": False, "file_count": 2},
+        )
+        output = self.root / "context.interop.json"
+        self.assertEqual(main(["normalize", str(source), "--artifact-root", str(self.root), "--out", str(output)]), 0)
+        self.assertEqual(
+            main(["verify-interop", str(output), "--artifact-root", str(self.root), "--require-input"]),
+            0,
         )
 
     def test_normalized_envelope_can_enter_the_proof_ledger(self):

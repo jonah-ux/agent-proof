@@ -59,6 +59,11 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "identity": ("run_id", "resume_id", "checkpoint_id"),
         "metrics": ("duration_ms", "step_count"),
     },
+    "context-integrity/v1": {
+        "kind": "context-integrity",
+        "identity": ("person_id", "project_id"),
+        "metrics": ("citation_count",),
+    },
     "agent-proof/v1": {
         "kind": "legacy-proof",
         "identity": ("run_id",),
