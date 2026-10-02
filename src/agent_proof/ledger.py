@@ -37,6 +37,7 @@ COLLECTABLE_SCHEMAS = {
     "agent-trace/v1": "trace summary",
     "context-pack/v1": "context pack",
     "agent-resume/v1": "continuation record",
+    "context-integrity/v1": "context integrity admission",
     "agent-proof/v1": "legacy proof envelope",
     RECORD_SCHEMA: "proof record",
     LEDGER_SCHEMA: "proof ledger",

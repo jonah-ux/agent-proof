@@ -9,6 +9,12 @@
   context-pack, resume, and proof envelopes, with allowlisted projections, explicit unknowns,
   source-byte binding, and fail-closed `verify-interop` readback.
 
+## 0.3.0 - 2026-10-02
+
+- Added a reviewed `context-integrity/v1` interoperability adapter and collectable schema,
+  preserving scoped identity as digests, citation counts as bounded metrics, and answer text
+  outside the normalized envelope.
+
 ## 0.2.0 - 2026-10-01
 
 - Added redacted `agent-proof/record/v2` evidence records with canonical hashes,
