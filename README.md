@@ -285,6 +285,14 @@ runtime dependencies.
 - Keep artifact roots private when the referenced files contain sensitive material. Hashes can
   still disclose equality between two observations.
 
+## Verify a release
+
+Releases after v0.4.1 carry signed GitHub build provenance for the wheel and sdist, alongside `SHA256SUMS`. To check that a downloaded file was built by this repository's release workflow:
+
+```console
+gh attestation verify agent_proof-*.whl --repo jonah-ux/agent-proof
+```
+
 ## Development
 
 ```console
