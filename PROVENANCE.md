@@ -9,8 +9,8 @@ The public audit script checks for these workflow markers and can compare a supp
 directory with its checksum manifest:
 
 ```sh
-python scripts/audit_public_surface.py --json
-python scripts/audit_public_surface.py --dist-dir dist --json
+python3 scripts/audit_public_surface.py --json
+python3 scripts/audit_public_surface.py --dist-dir dist --json
 ```
 
 The receipt is a source and artifact integrity aid. It does not claim a reproducible build across

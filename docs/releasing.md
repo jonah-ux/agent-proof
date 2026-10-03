@@ -46,12 +46,12 @@ The CI workflow also installs the built wheel and source archive into separate f
 
 ```bash
 python3 -m venv /tmp/agent-proof-wheel
-/tmp/agent-proof-wheel/bin/python -m pip install --no-deps dist/agent_proof-*.whl
+/tmp/agent-proof-wheel/bin/python3 -m pip install --no-deps dist/agent_proof-*.whl
 /tmp/agent-proof-wheel/bin/agent-proof --version
 /tmp/agent-proof-wheel/bin/agent-proof capture --out /tmp/agent-proof-wheel-capture.json
 
 python3 -m venv /tmp/agent-proof-sdist
-/tmp/agent-proof-sdist/bin/python -m pip install --no-deps dist/agent_proof-*.tar.gz
+/tmp/agent-proof-sdist/bin/python3 -m pip install --no-deps dist/agent_proof-*.tar.gz
 /tmp/agent-proof-sdist/bin/agent-proof --version
 /tmp/agent-proof-sdist/bin/agent-proof capture --out /tmp/agent-proof-sdist-capture.json
 ```

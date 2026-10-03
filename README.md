@@ -62,7 +62,7 @@ preserves only allowlisted signals and digests.
 The additive [`agent-systems-lab/compatibility/v1`](conformance/compatibility-v1.json) charter
 indexes the twelve public owners, pins each reviewed conformance artifact to an immutable commit
 and SHA-256, and defines the bounded cross-repository status and refusal vocabulary. Validate the
-charter from a clean checkout with `python scripts/check_compatibility.py`. The checker validates
+charter from a clean checkout with `python3 scripts/check_compatibility.py`. The checker validates
 the charter's own source identity and structure; it does not fetch or claim to deploy sibling
 repositories.
 
@@ -76,8 +76,8 @@ and producer receipts, rather than being claimed as cases in that older corpus.
 The public release surface can be inspected without installing a third-party scanner:
 
 ```console
-python scripts/audit_public_surface.py --json
-python scripts/audit_public_surface.py --dist-dir ./dist --json
+python3 scripts/audit_public_surface.py --json
+python3 scripts/audit_public_surface.py --dist-dir ./dist --json
 ```
 
 The `agent-proof-public-audit/v1` receipt inventories declared build/runtime dependencies,
@@ -314,10 +314,10 @@ gh attestation verify agent_proof-*.whl --repo jonah-ux/agent-proof
 ```console
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
-PYTHONPATH=src python -m unittest discover -s tests -v
+python3 -m pip install -e .
+PYTHONPATH=src python3 -m unittest discover -s tests -v
 PYTHONPATH=src python3 demos/demo.py
-python -m build --sdist --wheel
+python3 -m build --sdist --wheel
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [release procedure](docs/releasing.md),
