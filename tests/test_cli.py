@@ -255,6 +255,21 @@ class ProofLedgerTests(unittest.TestCase):
         self.assertEqual(main(["verify", str(path)]), 0)
         self.assertEqual(main(["verify", str(path), "--require-observed"]), 1)
 
+    def test_compatibility_command_validates_explicit_manifest(self):
+        self.assertEqual(
+            main([
+                "compatibility",
+                "--manifest",
+                str(Path(__file__).parents[1] / "conformance" / "compatibility-v1.json"),
+            ]),
+            0,
+        )
+
+    def test_compatibility_command_refuses_malformed_manifest(self):
+        path = self.root / "bad-compatibility.json"
+        path.write_text("[]", encoding="utf-8")
+        self.assertEqual(main(["compatibility", "--manifest", str(path)]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
