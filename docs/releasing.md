@@ -20,6 +20,21 @@ independently proven until a fresh consumer can run `agent-proof verify-bundle -
 against a bundle whose original artifact root is absent, receive `graph_state: "verified"`, and
 perform source-bound `agent-proof verify-graph` and `agent-proof verify-interop` readbacks.
 
+Use the matching strict export gate before publication so an unobserved or artifact-unverified
+proof cannot be packaged accidentally:
+
+```bash
+agent-proof export run-proof.json --artifact-root ./run-files --out run-proof.tar.gz \
+  --require-observed --require-artifacts --require-graph --max-bytes 67108864
+agent-proof verify-bundle run-proof.tar.gz \
+  --require-observed --require-artifacts --require-graph --max-bytes 67108864
+```
+
+The export budget is opt-in for backwards compatibility. When supplied, it measures the
+uncompressed bundle payload before the output file is created; `67108864` matches the verifier's
+64 MiB default. The export implementation still buffers artifact payloads while constructing a
+deterministic archive; a future bounded-memory spool can address very large evidence sets.
+
 The publication workflow runs the source suite and compatibility charter check. Each installed
 consumer then runs the native adapter regression corpus from outside the checkout, reads back its
 package location and version, and asserts the demo's bundle, graph, interoperability, and tamper
