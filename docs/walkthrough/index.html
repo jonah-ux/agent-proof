@@ -134,14 +134,14 @@
   <main class="shell">
     <header class="topbar">
       <span class="mark">AGENT PROOF / FIELD GUIDE</span>
-      <span>v0.3.1 prerelease · synthetic fixture · no network calls</span>
+      <span>v0.3.1 prerelease · synthetic · offline</span>
     </header>
 
     <section class="hero" aria-labelledby="title">
       <div>
-        <p class="eyebrow">Evidence that can say no</p>
+        <p class="eyebrow">Evidence with a stop button</p>
         <h1 id="title">Make the run explain itself.</h1>
-        <p class="lede">A small, local ledger for agent work. This walkthrough is a safe toy run: policy, sandbox, evaluation, proof, and bundle. Click the tamper button and watch the record refuse to overclaim.</p>
+        <p class="lede">A local proof ledger for policy, sandbox, evaluation, and bundle. Tamper with the fixture and watch it refuse to overclaim.</p>
         <div class="badge-row" aria-label="Walkthrough properties">
           <span class="badge">hash-linked</span>
           <span class="badge">redacted output</span>
@@ -150,8 +150,8 @@
       </div>
       <aside class="hero-card" aria-label="Standalone promise">
         <svg class="proof-radar" viewBox="0 0 320 86" role="img" aria-label="Observed evidence flows through a digest gate into a refusal-safe bundle"><path d="M14 43h78m38 0h56m38 0h82" fill="none" stroke="#2b3a33" stroke-width="2" stroke-dasharray="5 6"/><circle cx="14" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle cx="112" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle cx="190" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle class="spark" cx="306" cy="43" r="10"/><g fill="#a5aaa4" font-size="9" font-family="ui-monospace,monospace" text-anchor="middle"><text x="14" y="72">OBSERVE</text><text x="112" y="72">BIND</text><text x="190" y="72">VERIFY</text><text x="306" y="72">REFUSE</text></g></svg>
-        <p class="eyebrow">Standalone by design</p>
-        <h2>Install this repo. Run this repo.</h2>
+        <p class="eyebrow">Runs on its own</p>
+        <h2>Install it. Run it.</h2>
         <p>Agent Proof ships as its own Python package with zero runtime dependencies. The proof format can interoperate with other envelopes, but no sibling Jonah-UX repository or service is required.</p>
         <div class="tag-row"><span class="tag">Python ≥ 3.11</span><span class="tag">MIT</span><span class="tag">CLI + library</span></div>
         <div class="mission-actions" role="group" aria-label="Launch the synthetic proof readback"><button id="hero-seal" type="button">Seal fixture</button><button id="hero-refuse" type="button">Tamper + refuse</button><button id="hero-copy" type="button">Copy first run</button></div><p id="mission-status" class="mission-status" role="status" aria-live="polite">Choose a readback to see the proof gate move. The first-run commands are one click away.</p>
@@ -161,10 +161,10 @@
     <section class="grid" aria-label="Proof walkthrough">
       <article class="panel chain-panel">
         <div class="panel-head">
-          <div><div class="panel-kicker">01 / provenance</div><h2>One chain, six readable stops</h2></div>
+          <div><div class="panel-kicker">01 / proof chain</div><h2>Six stops. One readable chain.</h2></div>
           <span class="tag">fixture graph</span>
         </div>
-        <div class="chain-guide"><strong id="chain-focus">Observe</strong><span></span><span>click a stop to inspect the boundary</span></div><svg class="proof-radar" viewBox="0 0 760 34" role="img" aria-label="A line connecting six proof stages"><path d="M18 17H742" fill="none" stroke="#355d42" stroke-width="2" stroke-dasharray="7 8"/><circle cx="18" cy="17" r="7" fill="#a9f27d"/><circle cx="166" cy="17" r="7" fill="#355d42"/><circle cx="314" cy="17" r="7" fill="#355d42"/><circle cx="462" cy="17" r="7" fill="#355d42"/><circle cx="610" cy="17" r="7" fill="#355d42"/><circle cx="742" cy="17" r="7" fill="#355d42"/></svg><div class="chain" role="list" aria-label="Synthetic proof chain">
+        <div class="chain-guide"><strong id="chain-focus">Observe</strong><span></span><span>choose a stop</span></div><svg class="proof-radar" viewBox="0 0 760 34" role="img" aria-label="A line connecting six proof stages"><path d="M18 17H742" fill="none" stroke="#355d42" stroke-width="2" stroke-dasharray="7 8"/><circle cx="18" cy="17" r="7" fill="#a9f27d"/><circle cx="166" cy="17" r="7" fill="#355d42"/><circle cx="314" cy="17" r="7" fill="#355d42"/><circle cx="462" cy="17" r="7" fill="#355d42"/><circle cx="610" cy="17" r="7" fill="#355d42"/><circle cx="742" cy="17" r="7" fill="#355d42"/></svg><div class="chain" role="list" aria-label="Synthetic proof chain">
           <div class="node-wrap" role="listitem"><div class="node" data-step="policy" tabindex="0" role="button" aria-current="true"><div class="node-index">01</div><div class="node-name">Policy</div><div class="node-hash">8f4c…a91d</div></div><span class="arrow" aria-hidden="true"></span></div>
           <div class="node-wrap" role="listitem"><div class="node" data-step="sandbox" tabindex="0" role="button" aria-current="false"><div class="node-index">02</div><div class="node-name">Sandbox</div><div class="node-hash">12dd…08c2</div></div><span class="arrow" aria-hidden="true"></span></div>
           <div class="node-wrap" role="listitem"><div class="node" data-step="evaluation" tabindex="0" role="button" aria-current="false"><div class="node-index">03</div><div class="node-name">Evaluation</div><div class="node-hash">d2b7…e440</div></div><span class="arrow" aria-hidden="true"></span></div>
@@ -172,7 +172,7 @@
           <div class="node-wrap" role="listitem"><div class="node" data-step="proof" tabindex="0" role="button" aria-current="false"><div class="node-index">05</div><div class="node-name">Run proof</div><div class="node-hash">f11a…c805</div></div><span class="arrow" aria-hidden="true"></span></div>
           <div class="node-wrap" role="listitem"><div class="node" data-step="bundle" tabindex="0" role="button" aria-current="false"><div class="node-index">06</div><div class="node-name">Bundle</div><div class="node-hash">a09c…7bd3</div></div></div>
         </div>
-        <p class="note">Every label above is fixture data for the picture. Run <code>demos/demo.py</code> for real local hashes and a deterministic export.</p>
+        <p class="note">The chain above is synthetic. Run <code>demos/demo.py</code> for real local hashes.</p>
       </article>
 
       <article class="panel readout-panel">
@@ -185,7 +185,7 @@
       </article>
 
       <article class="panel walkthrough">
-        <div class="panel-head"><div><div class="panel-kicker">03 / quick start</div><h2>From empty directory to readback</h2></div><span class="tag">copy / paste</span></div>
+        <div class="panel-head"><div><div class="panel-kicker">03 / run locally</div><h2>From empty directory to proof</h2></div><span class="tag">copy / paste</span></div>
         <ol class="step-list">
           <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Check out the <code>v0.3.1</code> prerelease so the bundled demo exists.</span></div></li>
           <li class="step"><span class="step-no">2</span><div><strong>Run the synthetic demo</strong><span>It creates temporary policy, sandbox, evaluation, and artifact fixtures.</span></div></li>
@@ -201,7 +201,7 @@ python3 demos/demo.py</code></div>
       </article>
 
       <article class="panel install">
-        <div class="panel-head"><div><div class="panel-kicker">04 / contract</div><h2>What the check proves</h2></div><span class="tag">honest scope</span></div>
+        <div class="panel-head"><div><div class="panel-kicker">04 / limits</div><h2>What the check covers</h2></div><span class="tag">honest scope</span></div>
         <div class="facts">
           <div class="fact"><span class="fact-label">Proves</span><span class="fact-value">byte identity, chain order, source binding</span></div>
           <div class="fact"><span class="fact-label">Refuses</span><span class="fact-value">changed artifacts, bad links, traversal</span></div>
@@ -212,7 +212,7 @@ python3 demos/demo.py</code></div>
       </article>
 
       <article class="panel artifact-panel">
-        <div class="panel-head"><div><div class="panel-kicker">05 / go deeper</div><h2>Open the source of the promise</h2></div><span class="tag">all links stay in this repo</span></div>
+        <div class="panel-head"><div><div class="panel-kicker">05 / source</div><h2>Open the source</h2></div><span class="tag">repo links</span></div>
         <div class="artifact-grid">
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof#readme"><span class="artifact-label">READ</span><span class="artifact-title">README</span><span class="artifact-copy">CLI workflow, schemas, and privacy boundary.</span></a>
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof/blob/main/demos/demo.py"><span class="artifact-label">RUN</span><span class="artifact-title">Synthetic demo</span><span class="artifact-copy">The exact fixture flow behind this page.</span></a>
