@@ -215,7 +215,10 @@ unknowns; raw source values never cross the boundary. The Forgeyard `ai-work-evi
 also preserves its four source statuses and bounded artifact metadata while refusing unsupported
 versions, unsafe artifact names, malformed hashes, and malformed documents.
 
-Sourcemark's `sourcemark/check/v1` adapter carries only its six bounded counts and two `sha256:`
+Agent Policy's `agent-policy/receipt/v1` adapter carries the owner decision,
+optional policy/request digests and counts, and no operation targets. It keeps
+authorization separate from execution outcome and leaves missing `check` detail
+as explicit unknowns. Sourcemark's `sourcemark/check/v1` adapter carries only its six bounded counts and two `sha256:`
 identities. `ok` maps to a successful outcome; `observed`, `partial`, and `timed_out` remain
 explicitly uncertain, and the adapter refuses unreconciled counts or malformed identities.
 

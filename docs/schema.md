@@ -102,11 +102,14 @@ events, MCP findings, worktree data, command output, and owner-payload filesyste
 paths are not copied. The caller-selected root-relative source path is retained
 for provenance and can reveal directory or artifact names.
 These adapters do not infer observation from an exit code or a nested owner
-field. Slipstream rows, metadata, vectors, and error text remain outside the
+field. The `agent-policy/receipt/v1` adapter preserves the owner decision as
+`projection.status.owner_status` and keeps `projection.status.outcome` null;
+authorization is not execution evidence. Slipstream rows, metadata, vectors, and error text remain outside the
 projection; its query adapter carries only result count and a digest of result
 identities, while inspect, manifest, and verify carry bounded counters and
-producer-declared digests. Policy's schema-less receipt shape remains unsupported
-until its native boundary receives an explicit source-bound fixture.
+producer-declared digests. The older flat `agent-policy/v1` adapter remains a
+legacy/native fixture; versioned machine receipts use `agent-policy/receipt/v1`
+and preserve missing policy/request detail as explicit unknowns.
 
 The Sourcemark check adapter validates the owner export's exact field set and
 count reconciliation before projecting six bounded integer metrics and the two

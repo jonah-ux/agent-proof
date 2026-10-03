@@ -92,12 +92,13 @@
       "owner": "agent-policy",
       "repository": "https://github.com/jonah-ux/agent-policy",
       "native_schemas": [
+        "agent-policy/receipt/v1",
         "agent-policy/v1"
       ],
       "conformance_artifact": {
-        "url": "https://github.com/jonah-ux/agent-policy/blob/e571aa82269ef5c2266444858c712bc537799945/conformance/agent-systems-lab.json",
-        "revision": "e571aa82269ef5c2266444858c712bc537799945",
-        "sha256": "6456a7d9ece8917ca3e6cb91cee8df256b777e6ee70ae0167b9c804ce766bb6d"
+        "url": "https://github.com/jonah-ux/agent-policy/blob/6c65bc9c9a889989fd24cd4ef3bba539c96e8e28/conformance/agent-systems-lab.json",
+        "revision": "6c65bc9c9a889989fd24cd4ef3bba539c96e8e28",
+        "sha256": "85e3bc9489a01bd1447bb22d6dbb3b6f123c4dc56671059900e023c49c8b57cb"
       }
     },
     {
@@ -265,6 +266,20 @@
         "duration_ms",
         "item_count",
         "trial_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-policy/receipt/v1",
+      "kind": "policy-receipt",
+      "identity": [],
+      "metrics": [
+        "rule_count",
+        "operation_count"
+      ],
+      "digests": [
+        "policy_sha256",
+        "request_sha256"
       ],
       "source": "src/agent_proof/interop.py:ADAPTERS"
     },

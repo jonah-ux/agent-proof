@@ -8,6 +8,20 @@ from agent_proof.ledger import ProofError
 
 
 def source_payload(schema: str, index: int) -> dict:
+    if schema == "agent-policy/receipt/v1":
+        return {
+            "schema": schema,
+            "receipt_version": 1,
+            "tool": "agent-policy",
+            "mode": "explain",
+            "performed": False,
+            "notice": "synthetic policy receipt",
+            "result": {
+                "decision": "allow",
+                "policy": {"version": 1, "sha256": "a" * 64, "rule_count": 1},
+                "request": {"version": 1, "sha256": "b" * 64, "operation_count": 1},
+            },
+        }
     if schema == "sourcemark/check/v1":
         return {
             "schema": schema,
@@ -51,7 +65,7 @@ class AgentSystemsLabConformanceTests(unittest.TestCase):
         manifest = json.loads((Path(__file__).parents[1] / "conformance" / "agent-systems-lab.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schema"], "agent-proof-lab-conformance/v1")
         self.assertEqual({item["schema"] for item in manifest["adapters"]}, {
-            "agent-policy/v1", "agent-sandbox/v1", "agent-eval/v1", "agent-trace/v1", "context-pack/v1", "agent-resume/v1", "context-integrity/v1", "sourcemark/check/v1"
+            "agent-policy/v1", "agent-policy/receipt/v1", "agent-sandbox/v1", "agent-eval/v1", "agent-trace/v1", "context-pack/v1", "agent-resume/v1", "context-integrity/v1", "sourcemark/check/v1"
         })
 
     def test_every_manifest_adapter_normalizes_without_leaking_private_values(self):
