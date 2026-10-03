@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Agent Systems Lab conformance corpus
+
+- Add a synthetic adapter inventory and conformance tests for policy, sandbox, evaluation, trace,
+  context-pack, resume, and context-integrity envelopes.
+
 ## 0.3.1 - 2026-10-02
 
 - Reissued the context-integrity interoperability release through the annotated-tag workflow.
