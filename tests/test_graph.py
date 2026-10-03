@@ -9,7 +9,7 @@ from pathlib import Path
 
 from agent_proof.cli import main
 from agent_proof.graph import graph_document, verify_graph
-from agent_proof.ledger import ProofError, append_record, build_record, digest_json, export_bundle, make_ledger, merge_run, record_digest, verify_bundle, verify_document, write_json
+from agent_proof.ledger import ProofError, append_record, build_record, digest_json, export_bundle, ledger_digest, make_ledger, merge_run, record_digest, run_digest, verify_bundle, verify_document, write_json
 
 
 class ProvenanceGraphTests(unittest.TestCase):
@@ -353,6 +353,45 @@ class ProvenanceGraphTests(unittest.TestCase):
                 self.assertIs(report["ok"], False)
                 self.assertIn(error, report["error"])
                 self.assertFalse(output.exists())
+
+    def test_graph_builder_refuses_resealed_embedded_run_identity_mismatch(self):
+        record = build_record(self._spec(), artifact_root=self.root)
+        ledger = append_record(make_ledger("graph-run"), record, artifact_root=self.root)
+        run = merge_run(ledger, artifact_root=self.root)
+        for document, hash_field, hash_function in (
+            (ledger, "ledger_sha256", ledger_digest),
+            (run, "run_sha256", run_digest),
+        ):
+            with self.subTest(schema=document["schema"]):
+                malformed = copy.deepcopy(document)
+                embedded = malformed["records"][0]
+                embedded["run_id"] = "other-run"
+                embedded["record_sha256"] = record_digest(embedded)
+                if "record_hashes" in malformed:
+                    malformed["record_hashes"] = [embedded["record_sha256"]]
+                malformed[hash_field] = hash_function(malformed)
+                result = verify_document(malformed, artifact_root=self.root)
+                self.assertIs(result["ok"], False, result)
+                self.assertIn("record 1: run_id differs from ledger", result["errors"])
+                with self.assertRaisesRegex(ProofError, "run_id differs from ledger"):
+                    graph_document(malformed, artifact_root=self.root)
+                path = self.root / "mismatched.json"
+                write_json(path, malformed)
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    exit_code = main(["graph", str(path), "--artifact-root", str(self.root)])
+                self.assertEqual(exit_code, 2)
+                self.assertIn("run_id differs from ledger", json.loads(stdout.getvalue())["error"])
+
+    def test_empty_ledger_run_identity_is_still_required(self):
+        for run_id in (None, "", [], {}):
+            with self.subTest(run_id=run_id):
+                ledger = make_ledger("graph-run")
+                ledger["run_id"] = run_id
+                ledger["ledger_sha256"] = ledger_digest(ledger)
+                result = verify_document(ledger)
+                self.assertIs(result["ok"], False, result)
+                self.assertIn("run_id is missing or malformed", result["errors"])
 
     def test_cli_malformed_graph_returns_one_json_refusal(self):
         malformed = graph_document(self._run(), artifact_root=self.root)

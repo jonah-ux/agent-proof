@@ -537,6 +537,8 @@ def append_record(ledger: dict[str, Any], record: dict[str, Any], *, artifact_ro
 def verify_ledger(ledger: dict[str, Any], *, artifact_root: Path | None = None) -> dict[str, Any]:
     errors: list[str] = []
     _verify_repository(ledger.get("repository", {}), errors)
+    if not isinstance(ledger.get("run_id"), str) or not ledger["run_id"]:
+        errors.append("run_id is missing or malformed")
     if ledger.get("schema") != LEDGER_SCHEMA:
         errors.append(f"unsupported ledger schema: {ledger.get('schema')!r}")
     supplied = ledger.get("ledger_sha256")
@@ -562,6 +564,8 @@ def verify_ledger(ledger: dict[str, Any], *, artifact_root: Path | None = None) 
             continue
         result = verify_record(record, artifact_root=artifact_root)
         errors.extend(f"record {expected_sequence}: {error}" for error in result["errors"])
+        if record.get("run_id") != ledger.get("run_id"):
+            errors.append(f"record {expected_sequence}: run_id differs from ledger")
         if record.get("sequence") != expected_sequence:
             errors.append(f"record {expected_sequence}: sequence is not contiguous")
         if record.get("prev_sha256") != previous_hash:

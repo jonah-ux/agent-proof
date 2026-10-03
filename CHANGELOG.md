@@ -10,6 +10,8 @@
 - Reject unsupported node fields and normalize record unknowns to sorted unique strings.
 - Check native record observation/partial Boolean fields and canonical repository identity
   before derivation; refuse malformed repository fields during unbound graph verification.
+- Require ledger/run records to retain their container run identity during readback, matching
+  the existing append gate so derivation cannot emit a graph its verifier refuses.
 - Keep invalid schema values out of graph diagnostics; valid graph hashing and source binding
   retain the existing contract.
 - Cover the malformed-field API and CLI paths in the graph regression suite used by source,
