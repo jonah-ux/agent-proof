@@ -1,0 +1,110 @@
+{
+  "limits": "Sanitized producer-derived fixtures test adapter compatibility and privacy. They are not unmodified live receipts, an isolation guarantee, or proof of an owner digest beyond its format.",
+  "payloads": {
+    "mcp": {
+      "baseline": null,
+      "counts": {
+        "prompts": 0,
+        "resources": 0,
+        "tools": 1
+      },
+      "findings": [],
+      "fingerprint": "0387627840cceb4125df4e11a461bfd0da6bd55c68ddc6d0bbfe7faf5fc62710",
+      "ok": true,
+      "schema": "mcp-doctor/v1",
+      "strict": false,
+      "version": "0.3.0"
+    },
+    "sandbox": {
+      "backend": "fallback",
+      "command": [
+        "/bin/echo",
+        "synthetic"
+      ],
+      "command_sha256": "8529ba50b81dceaa3fa573604bc7871f85a2260c21f1d5f5a378286ab7ba1cb4",
+      "cwd": "/synthetic/sandbox-root",
+      "duration_ms": 4,
+      "enforced": false,
+      "exit_code": 0,
+      "ok": true,
+      "receipt_sha256": "5f0ad755ff87a06f3ab3e443404abe1c50ec20b0f9c4cc14ef26456e0adf53ef",
+      "root": "/synthetic/sandbox-root",
+      "schema": "agent-sandbox/v2",
+      "stderr": "",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_truncated": false,
+      "stdout": "synthetic\n",
+      "stdout_sha256": "18c4f85a180cf29ddc1f8e3a3143ff54d643d1c306dbe610f4f70482632071d4",
+      "stdout_truncated": false,
+      "timed_out": false,
+      "version": "0.2.0"
+    },
+    "trace_inspect": {
+      "blank_lines": 0,
+      "events": 2,
+      "raw_sha256": "ce3d6aaeef7a55fd8fa19e07f3794f02369e5b8d6e1db8c874fb7be16e50129d",
+      "redacted_sha256": "e1e99a348b2772a846b2b30b7305a87ca533fd6d27542e1e0845a885d07e0977",
+      "redactions": 1,
+      "schema": "agent-trace/inspect/v1",
+      "source_lines": 2,
+      "types": {
+        "result": 1,
+        "tool": 1
+      }
+    },
+    "trace_query": {
+      "events": [
+        {
+          "name": "read_file",
+          "token": "[REDACTED]",
+          "type": "tool"
+        }
+      ],
+      "matched": 1,
+      "schema": "agent-trace/query/v1"
+    },
+    "worktree": {
+      "command": "demo",
+      "data": {
+        "applied": 1,
+        "audit_attention": 0,
+        "audited": true,
+        "demo": "worktree-conservator/v1",
+        "head": "0000000000000000000000000000000000000000",
+        "planned": 1,
+        "restored": true,
+        "verified": true
+      },
+      "errors": [],
+      "ok": true,
+      "schema": "worktree-conservator.result/v1",
+      "warnings": []
+    }
+  },
+  "provenance": {
+    "mcp": {
+      "invocation": "check <synthetic-manifest> --json",
+      "repository": "jonah-ux/mcp-doctor",
+      "revision": "b88b3d7a3376a0baecb3cc0d65ae888be964820d",
+      "transformations": "none"
+    },
+    "sandbox": {
+      "invocation": "run --root <temporary-root> --cwd <temporary-root> /bin/echo synthetic",
+      "repository": "jonah-ux/agent-sandbox-run",
+      "revision": "e400a93bd8cb4d488f5d23d0f8aa398c3bc3afd7",
+      "transformations": "replace temporary root/cwd with virtual paths and recompute receipt_sha256 using the pinned producer canonicalization"
+    },
+    "trace": {
+      "invocation": "inspect <synthetic-jsonl>; query <synthetic-jsonl> --type tool --contains read_file --limit 5",
+      "repository": "jonah-ux/agent-trace-lite",
+      "revision": "2a2b0302899db4f086dfbd277ae11bebe8180d59",
+      "transformations": "none"
+    },
+    "worktree": {
+      "invocation": "published v0.3.0 installed demo --json",
+      "repository": "jonah-ux/worktree-conservator",
+      "revision": "98291f86f1b725b0e579f9cfe0d6acc093728d7f",
+      "transformations": "replace nondeterministic synthetic Git HEAD with a virtual value; no other fields changed"
+    }
+  }
+}

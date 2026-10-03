@@ -20,6 +20,19 @@ jobs:
       - run: python -m pip install -e .
       - run: python -m pip install build
       - run: python -m build --sdist --wheel
+      - name: Verify source-distribution conformance resources
+        run: |
+          python - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import tarfile
+          required = {"conformance/native-receipts.json", "conformance/compatibility-v1.json", "conformance/agent-systems-lab.json", "conformance/forgeyard-ai-work-evidence-v1.json"}
+          with tarfile.open(next(Path("dist").glob("*.tar.gz"))) as archive:
+              names = {"/".join(PurePosixPath(member.name).parts[1:]) for member in archive if member.isfile()}
+          missing = sorted(required - names)
+          if missing:
+              raise SystemExit(f"Source distribution missing conformance resources: {missing}")
+          print("Source distribution contains native fixtures and existing conformance corpora")
+          PY
       - run: python -m unittest discover -s tests -v
       - name: Validate Agent Systems Lab compatibility charter
         run: python scripts/check_compatibility.py --manifest conformance/compatibility-v1.json
@@ -34,6 +47,10 @@ jobs:
           "$RUNNER_TEMP/agent-proof-wheel/bin/agent-proof" --version
           "$RUNNER_TEMP/agent-proof-wheel/bin/agent-proof" --help
           "$RUNNER_TEMP/agent-proof-wheel/bin/agent-proof" capture --out "$RUNNER_TEMP/agent-proof-capture.json"
+          cd "$RUNNER_TEMP"
+          unset PYTHONPATH
+          "$RUNNER_TEMP/agent-proof-wheel/bin/python" -c 'from pathlib import Path; import sys, agent_proof; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; print(source)'
+          "$RUNNER_TEMP/agent-proof-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
       - name: Verify installed sdist consumer
         shell: bash
         run: |
@@ -43,3 +60,7 @@ jobs:
           "$RUNNER_TEMP/agent-proof-sdist/bin/agent-proof" --version
           "$RUNNER_TEMP/agent-proof-sdist/bin/agent-proof" --help
           "$RUNNER_TEMP/agent-proof-sdist/bin/agent-proof" capture --out "$RUNNER_TEMP/agent-proof-sdist-capture.json"
+          cd "$RUNNER_TEMP"
+          unset PYTHONPATH
+          "$RUNNER_TEMP/agent-proof-sdist/bin/python" -c 'from pathlib import Path; import sys, agent_proof; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; print(source)'
+          "$RUNNER_TEMP/agent-proof-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v

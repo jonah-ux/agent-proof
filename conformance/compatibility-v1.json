@@ -439,11 +439,12 @@
     {
       "schema": "mcp-doctor/v1",
       "kind": "mcp-diagnostics",
-      "identity": [
-        "fingerprint"
-      ],
+      "identity": [],
       "metrics": [],
-      "source": "src/agent_proof/interop.py:ADAPTERS"
+      "source": "src/agent_proof/interop.py:ADAPTERS",
+      "digests": [
+        "fingerprint"
+      ]
     },
     {
       "schema": "worktree-conservator.result/v1",

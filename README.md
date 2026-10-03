@@ -47,7 +47,9 @@ The reviewed interop registry also recognizes native `agent-sandbox/v2`,
 `agent-trace/inspect/v1`, `agent-trace/query/v1`, `mcp-doctor/v1`, and
 `worktree-conservator.result/v1` envelopes. Their projections keep only bounded
 status, counters, and declared digests; owner output, findings, command text,
-paths, and event bodies remain outside the normalized record. Policy receipts
+owner-payload paths, and event bodies remain outside the normalized record.
+The caller-selected root-relative input path remains in `source.path` for binding;
+use a neutral artifact name if its filename would reveal private context. Policy receipts
 without a producer schema and Slipstream's nested Node envelopes remain explicit
 follow-up adapter work rather than being guessed here.
 
@@ -62,6 +64,19 @@ and SHA-256, and defines the bounded cross-repository status and refusal vocabul
 charter from a clean checkout with `python scripts/check_compatibility.py`. The checker validates
 the charter's own source identity and structure; it does not fetch or claim to deploy sibling
 repositories.
+
+Participant schema lists describe their pinned conformance artifacts, rather than
+an exhaustive inventory of producer commands. Trace query is a separately tested
+source-level adapter; the pinned Trace artifact does not declare its query schema.
+The Agent Proof self-pin freezes the pre-native conformance corpus to avoid a
+circular self-reference. Native additions are qualified by their dedicated tests
+and producer receipts, rather than being claimed as cases in that older corpus.
+
+[`conformance/native-receipts.json`](conformance/native-receipts.json) records
+sanitized outputs from pinned producer commands and the exact transformations.
+Dedicated native tests run against both installed distributions in CI. Digest
+fields are producer-declared and format-validated; normalization does not certify
+Sandbox isolation or recompute owner digests without the original inputs.
 
 Example result:
 
