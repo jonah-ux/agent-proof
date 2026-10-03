@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A local, synthetic walkthrough of Agent Proof's evidence chain and tamper refusal.">
+  <title>Agent Proof · evidence chain walkthrough</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7f7f2;
+      --muted: #a5aaa4;
+      --faint: #68716b;
+      --panel: #111715;
+      --panel-raised: #17211d;
+      --line: #2b3a33;
+      --green: #a9f27d;
+      --green-dim: #355d42;
+      --orange: #ffc978;
+      --red: #ff8e85;
+      --blue: #9fd9ff;
+      --shadow: 0 20px 60px rgba(0, 0, 0, .26);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 75% -10%, rgba(169, 242, 125, .11), transparent 34rem),
+        #0b0e0d;
+      line-height: 1.55;
+    }
+    a { color: var(--blue); text-underline-offset: .18em; }
+    a:hover { color: var(--green); }
+    .shell { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 34px 0 72px; }
+    .eyebrow { color: var(--green); font-size: .73rem; letter-spacing: .15em; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 800px; margin-bottom: 16px; font-size: clamp(2.35rem, 7vw, 5.7rem); line-height: .98; letter-spacing: -.08em; }
+    h2 { margin-bottom: 8px; font-size: 1.1rem; letter-spacing: -.03em; }
+    .lede { max-width: 690px; color: var(--muted); font-size: 1rem; }
+    .topbar { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin-bottom: 84px; color: var(--muted); font-size: .8rem; }
+    .mark { color: var(--ink); letter-spacing: .08em; }
+    .mark::before { content: "◈"; color: var(--green); margin-right: 9px; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(290px, .8fr); gap: 28px; align-items: end; margin-bottom: 42px; }
+    .hero-card, .panel { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(23, 33, 29, .94), rgba(13, 18, 16, .96)); box-shadow: var(--shadow); }
+    .hero-card { padding: 22px; border-radius: 18px; }
+    .hero-card p { color: var(--muted); font-size: .86rem; }
+    .badge-row, .actions, .tag-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .badge, .tag { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 999px; padding: 5px 9px; color: var(--muted); font-size: .7rem; letter-spacing: .04em; }
+    .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 14px var(--green); }
+    .badge.orange::before { background: var(--orange); box-shadow: 0 0 14px var(--orange); }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
+    .panel { border-radius: 14px; padding: 22px; }
+    .chain-panel { grid-column: span 8; }
+    .readout-panel { grid-column: span 4; }
+    .panel-head { display: flex; justify-content: space-between; gap: 14px; align-items: start; margin-bottom: 21px; }
+    .panel-kicker { color: var(--faint); font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; }
+    .chain { display: grid; grid-template-columns: repeat(6, minmax(100px, 1fr)); gap: 0; align-items: center; overflow-x: auto; padding-bottom: 5px; }
+    .node-wrap { display: flex; align-items: center; min-width: 132px; }
+    .node { width: 118px; min-height: 104px; padding: 13px 11px; border: 1px solid var(--green-dim); border-radius: 12px; background: #101a15; }
+    .node-index { color: var(--green); font-size: .68rem; }
+    .node-name { margin: 9px 0 10px; font-size: .82rem; font-weight: 700; }
+    .node-hash { color: var(--faint); font-size: .65rem; word-break: break-all; }
+    .arrow { flex: 1; min-width: 16px; height: 1px; margin: 0 8px; background: var(--green-dim); position: relative; }
+    .arrow::after { content: "›"; position: absolute; right: -2px; top: -12px; color: var(--green); font-size: 1.1rem; }
+    .readout { min-height: 278px; display: flex; flex-direction: column; justify-content: space-between; }
+    .state { display: flex; align-items: center; gap: 12px; min-height: 74px; border: 1px solid var(--green-dim); border-radius: 12px; padding: 13px; background: rgba(53, 93, 66, .16); }
+    .state-dot { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; background: var(--green); box-shadow: 0 0 18px var(--green); }
+    .state strong { display: block; font-size: 1.35rem; letter-spacing: -.05em; }
+    .state small { color: var(--muted); font-size: .72rem; }
+    .state.fail { border-color: rgba(255, 142, 133, .52); background: rgba(255, 142, 133, .1); }
+    .state.fail .state-dot { background: var(--red); box-shadow: 0 0 18px var(--red); }
+    .state.fail strong { color: var(--red); }
+    .state.reset { border-color: rgba(255, 201, 120, .48); background: rgba(255, 201, 120, .08); }
+    .state.reset .state-dot { background: var(--orange); box-shadow: 0 0 18px var(--orange); }
+    .state.reset strong { color: var(--orange); }
+    button { border: 1px solid var(--line); border-radius: 999px; padding: 10px 13px; color: var(--ink); background: #19241f; font: inherit; font-size: .75rem; cursor: pointer; }
+    button:hover, button:focus-visible { border-color: var(--green); color: var(--green); outline: none; }
+    button.primary { border-color: var(--green-dim); background: var(--green); color: #102016; font-weight: 700; }
+    button.primary:hover, button.primary:focus-visible { border-color: var(--green); color: #102016; filter: brightness(1.08); }
+    .actions { margin-top: 17px; }
+    .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 18px 0 0; }
+    .fact { border-top: 1px solid var(--line); padding-top: 10px; }
+    .fact-label { color: var(--faint); display: block; font-size: .67rem; text-transform: uppercase; }
+    .fact-value { display: block; margin-top: 4px; font-size: .83rem; }
+    .walkthrough { grid-column: span 7; }
+    .install { grid-column: span 5; }
+    .step-list { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
+    .step { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+    .step-no { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid var(--green-dim); border-radius: 50%; color: var(--green); font-size: .72rem; }
+    .step strong { display: block; margin-bottom: 2px; font-size: .83rem; }
+    .step span { color: var(--muted); font-size: .76rem; }
+    .terminal { margin-top: 15px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; overflow-x: auto; background: #090d0b; color: var(--green); font-size: .74rem; }
+    .terminal code { white-space: pre; }
+    .note { margin: 15px 0 0; color: var(--muted); font-size: .77rem; }
+    .artifact-panel { grid-column: span 12; }
+    .artifact-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .artifact { display: block; min-height: 100px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; color: var(--ink); background: rgba(255,255,255,.02); text-decoration: none; }
+    .artifact:hover { border-color: var(--green-dim); background: rgba(169,242,125,.06); }
+    .artifact-label { color: var(--green); font-size: .72rem; }
+    .artifact-title { display: block; margin: 9px 0 5px; font-size: .82rem; }
+    .artifact-copy { color: var(--muted); font-size: .7rem; }
+    footer { display: flex; justify-content: space-between; gap: 18px; margin-top: 28px; color: var(--faint); font-size: .68rem; }
+    @media (max-width: 850px) {
+      .hero { grid-template-columns: 1fr; }
+      .chain-panel, .readout-panel, .walkthrough, .install { grid-column: span 12; }
+      .artifact-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 520px) {
+      .shell { width: min(100% - 24px, 1180px); padding-top: 21px; }
+      .topbar { margin-bottom: 48px; }
+      .artifact-grid { grid-template-columns: 1fr; }
+      footer { display: block; }
+      footer span { display: block; margin-top: 7px; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .node { transition: transform .18s ease, border-color .18s ease; }
+      .node:hover { transform: translateY(-3px); border-color: var(--green); }
+      .state { animation: settle .35s ease-out; }
+      @keyframes settle { from { opacity: .45; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <span class="mark">AGENT PROOF / FIELD GUIDE</span>
+      <span>v0.3.1 prerelease · synthetic fixture · no network calls</span>
+    </header>
+
+    <section class="hero" aria-labelledby="title">
+      <div>
+        <p class="eyebrow">Evidence that can say no</p>
+        <h1 id="title">Make the run explain itself.</h1>
+        <p class="lede">A small, local ledger for agent work. This walkthrough is a safe toy run: policy, sandbox, evaluation, proof, and bundle. Click the tamper button and watch the record refuse to overclaim.</p>
+        <div class="badge-row" aria-label="Walkthrough properties">
+          <span class="badge">hash-linked</span>
+          <span class="badge">redacted output</span>
+          <span class="badge orange">fail-closed</span>
+        </div>
+      </div>
+      <aside class="hero-card" aria-label="Standalone promise">
+        <p class="eyebrow">Standalone by design</p>
+        <h2>Install this repo. Run this repo.</h2>
+        <p>Agent Proof ships as its own Python package with zero runtime dependencies. The proof format can interoperate with other envelopes, but no sibling Jonah-UX repository or service is required.</p>
+        <div class="tag-row"><span class="tag">Python ≥ 3.11</span><span class="tag">MIT</span><span class="tag">CLI + library</span></div>
+      </aside>
+    </section>
+
+    <section class="grid" aria-label="Proof walkthrough">
+      <article class="panel chain-panel">
+        <div class="panel-head">
+          <div><div class="panel-kicker">01 / provenance</div><h2>One chain, six readable stops</h2></div>
+          <span class="tag">fixture graph</span>
+        </div>
+        <div class="chain" role="list" aria-label="Synthetic proof chain">
+          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">01</div><div class="node-name">Policy</div><div class="node-hash">8f4c…a91d</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">02</div><div class="node-name">Sandbox</div><div class="node-hash">12dd…08c2</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">03</div><div class="node-name">Evaluation</div><div class="node-hash">d2b7…e440</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">04</div><div class="node-name">Record</div><div class="node-hash">b5fe…9e17</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">05</div><div class="node-name">Run proof</div><div class="node-hash">f11a…c805</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">06</div><div class="node-name">Bundle</div><div class="node-hash">a09c…7bd3</div></div></div>
+        </div>
+        <p class="note">Every label above is fixture data for the picture. Run <code>demos/demo.py</code> for real local hashes and a deterministic export.</p>
+      </article>
+
+      <article class="panel readout-panel">
+        <div class="panel-head"><div><div class="panel-kicker">02 / readback</div><h2>Integrity gate</h2></div><span class="tag" id="mode-tag">clean run</span></div>
+        <div id="state" class="state" role="status" aria-live="polite">
+          <span class="state-dot" aria-hidden="true"></span><div><strong id="state-title">SEALED</strong><small id="state-copy">fixture bytes match the proof record</small></div>
+        </div>
+        <div class="actions"><button class="primary" id="verify" type="button">Verify clean fixture</button><button id="tamper" type="button">Tamper artifact</button><button id="reset" type="button">Reset</button></div>
+        <div class="facts"><div class="fact"><span class="fact-label">Observed</span><span class="fact-value" id="observed">true</span></div><div class="fact"><span class="fact-label">Unknowns</span><span class="fact-value" id="unknowns">0</span></div><div class="fact"><span class="fact-label">Records</span><span class="fact-value">2 linked</span></div><div class="fact"><span class="fact-label">Raw output</span><span class="fact-value">never stored</span></div></div>
+      </article>
+
+      <article class="panel walkthrough">
+        <div class="panel-head"><div><div class="panel-kicker">03 / quick start</div><h2>From empty directory to readback</h2></div><span class="tag">copy / paste</span></div>
+        <ol class="step-list">
+          <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Check out the <code>v0.3.1</code> prerelease so the bundled demo exists.</span></div></li>
+          <li class="step"><span class="step-no">2</span><div><strong>Run the synthetic demo</strong><span>It creates temporary policy, sandbox, evaluation, and artifact fixtures.</span></div></li>
+          <li class="step"><span class="step-no">3</span><div><strong>Read the refusal</strong><span>The demo mutates an artifact, verifies the old proof, and expects a failed readback.</span></div></li>
+        </ol>
+        <div class="terminal" aria-label="Install and demo commands"><code>git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+cd agent-proof
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install .
+agent-proof --version
+python3 demos/demo.py</code></div>
+      </article>
+
+      <article class="panel install">
+        <div class="panel-head"><div><div class="panel-kicker">04 / contract</div><h2>What the check proves</h2></div><span class="tag">honest scope</span></div>
+        <div class="facts">
+          <div class="fact"><span class="fact-label">Proves</span><span class="fact-value">byte identity, chain order, source binding</span></div>
+          <div class="fact"><span class="fact-label">Refuses</span><span class="fact-value">changed artifacts, bad links, traversal</span></div>
+          <div class="fact"><span class="fact-label">Does not prove</span><span class="fact-value">authorship, deployment, user outcome</span></div>
+          <div class="fact"><span class="fact-label">Data boundary</span><span class="fact-value">digests + allowlists, no raw stdout</span></div>
+        </div>
+        <p class="note">Integrity and outcome stay separate. A sealed record can still carry an explicit unknown or partial result.</p>
+      </article>
+
+      <article class="panel artifact-panel">
+        <div class="panel-head"><div><div class="panel-kicker">05 / go deeper</div><h2>Open the source of the promise</h2></div><span class="tag">all links stay in this repo</span></div>
+        <div class="artifact-grid">
+          <a class="artifact" href="../../README.md"><span class="artifact-label">READ</span><span class="artifact-title">README</span><span class="artifact-copy">CLI workflow, schemas, and privacy boundary.</span></a>
+          <a class="artifact" href="../../demos/demo.py"><span class="artifact-label">RUN</span><span class="artifact-title">Synthetic demo</span><span class="artifact-copy">The exact fixture flow behind this page.</span></a>
+          <a class="artifact" href="../../docs/schema.md"><span class="artifact-label">MAP</span><span class="artifact-title">Schema reference</span><span class="artifact-copy">Record, graph, interop, and bundle contracts.</span></a>
+          <a class="artifact" href="https://github.com/jonah-ux/agent-proof/releases/tag/v0.3.1"><span class="artifact-label">GET</span><span class="artifact-title">Published v0.3.1</span><span class="artifact-copy">Release assets and annotated tag on GitHub.</span></a>
+        </div>
+      </article>
+    </section>
+
+    <footer><span>synthetic fixture only · no credentials · no sibling service</span><span>Agent Proof v0.3.1 · MIT</span></footer>
+  </main>
+  <script>
+    const state = document.querySelector('#state');
+    const title = document.querySelector('#state-title');
+    const copy = document.querySelector('#state-copy');
+    const mode = document.querySelector('#mode-tag');
+    const observed = document.querySelector('#observed');
+    const unknowns = document.querySelector('#unknowns');
+    function show(kind, nextTitle, nextCopy, nextMode, nextObserved, nextUnknowns) {
+      state.className = `state ${kind}`;
+      title.textContent = nextTitle;
+      copy.textContent = nextCopy;
+      mode.textContent = nextMode;
+      observed.textContent = nextObserved;
+      unknowns.textContent = nextUnknowns;
+    }
+    document.querySelector('#verify').addEventListener('click', () => show('', 'SEALED', 'fixture bytes match the proof record', 'clean run', 'true', '0'));
+    document.querySelector('#tamper').addEventListener('click', () => show('fail', 'REFUSED', 'artifact digest changed; stale proof cannot pass', 'tampered fixture', 'false', '1'));
+    document.querySelector('#reset').addEventListener('click', () => show('reset', 'READY', 'fixture is waiting for a verification readback', 'reset', 'unknown', 'unknown'));
+  </script>
+</body>
+</html>
