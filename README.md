@@ -73,6 +73,20 @@ The Agent Proof self-pin freezes the pre-native conformance corpus to avoid a
 circular self-reference. Native additions are qualified by their dedicated tests
 and producer receipts, rather than being claimed as cases in that older corpus.
 
+The public release surface can be inspected without installing a third-party scanner:
+
+```console
+python scripts/audit_public_surface.py --json
+python scripts/audit_public_surface.py --dist-dir ./dist --json
+```
+
+The `agent-proof-public-audit/v1` receipt inventories declared build/runtime dependencies,
+checks the MIT license and release-workflow provenance markers, scans tracked text files for a
+small set of high-signal credential patterns, and optionally compares wheel/source-archive bytes
+with `SHA256SUMS`. An omitted distribution directory is reported as `unavailable`. The audit is
+an inspectable release aid; it does not claim a complete DLP system, security certification,
+reproducible builds across machines, deployment, adoption, or production readiness.
+
 [`conformance/native-receipts.json`](conformance/native-receipts.json) records
 sanitized outputs from pinned producer commands and the exact transformations.
 Dedicated native tests run against both installed distributions in CI. Digest
