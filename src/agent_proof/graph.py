@@ -290,7 +290,8 @@ def verify_graph(
             expected_id_prefix = "blob" if kind == "evidence" else "container" if node_id.startswith("container:") else "record"
             if node_id != f"{expected_id_prefix}:{digest}":
                 errors.append(f"nodes[{index}] id does not exactly match its kind and sha256")
-        if kind == "record" and (not isinstance(node.get("sequence"), int) or node.get("sequence", 0) < 1):
+        # A standalone record container has kind "record" but no chain sequence.
+        if node_id.startswith("record:") and (type(node.get("sequence")) is not int or node.get("sequence", 0) < 1):
             errors.append(f"nodes[{index}] record sequence is invalid")
         if kind == "evidence":
             if not isinstance(node.get("roles"), list) or not node["roles"] or any(not isinstance(item, str) for item in node["roles"]):
@@ -350,7 +351,7 @@ def verify_graph(
             errors.append(f"edges[{index}] has an unsupported kind")
         elif set(edge) - allowed_keys:
             errors.append(f"edges[{index}] contains unsupported fields")
-        if kind in {"contains", "continues"} and (not isinstance(edge.get("sequence"), int) or edge.get("sequence", 0) < 1):
+        if kind in {"contains", "continues"} and (type(edge.get("sequence")) is not int or edge.get("sequence", 0) < 1):
             errors.append(f"edges[{index}] sequence is invalid")
         if kind in {"supports", "produces"} and (not isinstance(edge.get("path"), str) or not edge["path"]):
             errors.append(f"edges[{index}] path is missing")

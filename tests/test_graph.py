@@ -1,12 +1,13 @@
 import copy
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
 from agent_proof.cli import main
 from agent_proof.graph import graph_document, verify_graph
-from agent_proof.ledger import ProofError, append_record, build_record, digest_json, make_ledger, merge_run, write_json
+from agent_proof.ledger import ProofError, append_record, build_record, digest_json, export_bundle, make_ledger, merge_run, verify_bundle, verify_document, write_json
 
 
 class ProvenanceGraphTests(unittest.TestCase):
@@ -128,6 +129,53 @@ class ProvenanceGraphTests(unittest.TestCase):
         record = build_record(spec, artifact_root=self.root)
         with self.assertRaises(ProofError):
             graph_document(record, artifact_root=self.root)
+
+    def test_standalone_record_graph_and_portable_bundle_round_trip(self):
+        for observed in (True, False):
+            with self.subTest(observed=observed), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory) / "fixtures"
+                root.mkdir()
+                (root / "artifact.txt").write_text("known bytes\n", encoding="utf-8")
+                spec = self._spec(observed=observed)
+                spec["sources"] = []
+                record = build_record(spec, artifact_root=root)
+                graph = graph_document(record, artifact_root=root, require_artifacts=True)
+                self.assertIs(verify_graph(graph)["ok"], True)
+                bound = verify_graph(graph, document=record, artifact_root=root, require_input=True, require_artifacts=True)
+                self.assertIs(bound["ok"], True, bound)
+                self.assertEqual(bound["input_state"], "bound")
+                bundle = Path(directory) / "standalone.tar.gz"
+                export_bundle(record, verify_document(record, artifact_root=root), bundle, artifact_root=root)
+                shutil.rmtree(root)
+                self.assertFalse(root.exists())
+                result = verify_bundle(bundle, require_artifacts=True, require_graph=True)
+                self.assertIs(result["ok"], True, result)
+                self.assertEqual(result["graph_state"], "verified")
+                self.assertIs(result["observed"], observed)
+
+    def test_standalone_record_node_sequence_remains_required(self):
+        record = build_record(self._spec(), artifact_root=self.root)
+        graph = graph_document(record, artifact_root=self.root)
+        for sequence in (None, 0, "1", True):
+            with self.subTest(sequence=sequence):
+                malformed = copy.deepcopy(graph)
+                node = next(node for node in malformed["nodes"] if node["id"].startswith("record:"))
+                if sequence is None:
+                    node.pop("sequence")
+                else:
+                    node["sequence"] = sequence
+                malformed["graph_sha256"] = digest_json({key: value for key, value in malformed.items() if key != "graph_sha256"})
+                result = verify_graph(malformed)
+                self.assertIs(result["ok"], False, result)
+                self.assertTrue(any("record sequence is invalid" in error for error in result["errors"]), result)
+
+        malformed_edge = copy.deepcopy(graph)
+        edge = next(edge for edge in malformed_edge["edges"] if edge["kind"] == "contains")
+        edge["sequence"] = True
+        malformed_edge["graph_sha256"] = digest_json({key: value for key, value in malformed_edge.items() if key != "graph_sha256"})
+        result = verify_graph(malformed_edge)
+        self.assertIs(result["ok"], False, result)
+        self.assertTrue(any("sequence is invalid" in error for error in result["errors"]), result)
 
     def test_require_gates_and_unsupported_inputs_refuse(self):
         with self.assertRaises(ProofError):

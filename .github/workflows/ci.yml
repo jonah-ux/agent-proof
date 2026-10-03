@@ -51,6 +51,7 @@ jobs:
           unset PYTHONPATH
           "$RUNNER_TEMP/agent-proof-wheel/bin/python" -c 'from pathlib import Path; import sys, agent_proof; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; print(source)'
           "$RUNNER_TEMP/agent-proof-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
+          "$RUNNER_TEMP/agent-proof-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_graph.py -v
       - name: Verify installed sdist consumer
         shell: bash
         run: |
@@ -64,3 +65,4 @@ jobs:
           unset PYTHONPATH
           "$RUNNER_TEMP/agent-proof-sdist/bin/python" -c 'from pathlib import Path; import sys, agent_proof; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; print(source)'
           "$RUNNER_TEMP/agent-proof-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
+          "$RUNNER_TEMP/agent-proof-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_graph.py -v

@@ -74,6 +74,7 @@ jobs:
           "$RUNNER_TEMP/agent-proof-release-wheel/bin/agent-proof" --version
           "$RUNNER_TEMP/agent-proof-release-wheel/bin/agent-proof" --help
           "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_graph.py -v
           "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" "$GITHUB_WORKSPACE/demos/demo.py" > agent-proof-release-wheel-demo.json
           "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -c 'import json; from pathlib import Path; result = json.loads(Path("agent-proof-release-wheel-demo.json").read_text()); required = ("ok", "verified", "tamper_refused", "bundle_verified", "bundle_tamper_refused", "graph_verified", "graph_tamper_refused", "bundle_graph_verified", "interop_verified"); assert all(result.get(key) is True for key in required), result; assert result.get("interop_source_state") == "verified", result; print(json.dumps(result, sort_keys=True))'
       - name: Verify source consumer
@@ -89,6 +90,7 @@ jobs:
           "$RUNNER_TEMP/agent-proof-release-sdist/bin/agent-proof" --version
           "$RUNNER_TEMP/agent-proof-release-sdist/bin/agent-proof" --help
           "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_graph.py -v
           "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" "$GITHUB_WORKSPACE/demos/demo.py" > agent-proof-release-sdist-demo.json
           "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -c 'import json; from pathlib import Path; result = json.loads(Path("agent-proof-release-sdist-demo.json").read_text()); required = ("ok", "verified", "tamper_refused", "bundle_verified", "bundle_tamper_refused", "graph_verified", "graph_tamper_refused", "bundle_graph_verified", "interop_verified"); assert all(result.get(key) is True for key in required), result; assert result.get("interop_source_state") == "verified", result; print(json.dumps(result, sort_keys=True))'
       - name: Publish prerelease assets
