@@ -5,6 +5,7 @@
     {"schema": "agent-policy/v1", "kind": "policy", "identity": ["run_id", "policy_id"]},
     {"schema": "agent-policy/receipt/v1", "kind": "policy-receipt", "identity": [], "metrics": ["rule_count", "operation_count"], "digests": ["policy_sha256", "request_sha256"]},
     {"schema": "agent-sandbox/v1", "kind": "sandbox", "identity": ["run_id", "receipt_id"]},
+    {"schema": "agent-sandbox/v2", "kind": "sandbox", "identity": [], "metrics": ["duration_ms"], "digests": ["command_sha256", "stdout_sha256", "stderr_sha256", "receipt_sha256"]},
     {"schema": "agent-eval/v1", "kind": "evaluation", "identity": ["run_id", "evaluation_id", "candidate_id"]},
     {"schema": "agent-trace/v1", "kind": "trace", "identity": ["run_id", "trace_id"]},
     {"schema": "context-pack/v1", "kind": "context", "identity": ["run_id", "pack_id"]},

@@ -37,6 +37,24 @@ def source_payload(schema: str, index: int) -> dict:
             "policy_sha256": "sha256:" + "a" * 64,
             "session_sha256": "sha256:" + "b" * 64,
         }
+    if schema == "agent-sandbox/v2":
+        return {
+            "schema": schema,
+            "version": "0.2.0",
+            "ok": True,
+            "exit_code": 0,
+            "backend": "fallback",
+            "enforced": False,
+            "timed_out": False,
+            "duration_ms": 5,
+            "command": ["printf", "synthetic"],
+            "command_sha256": "a" * 64,
+            "stdout_sha256": "b" * 64,
+            "stderr_sha256": "c" * 64,
+            "receipt_sha256": "d" * 64,
+            "stdout_truncated": False,
+            "stderr_truncated": False,
+        }
     payload = {
         "schema": schema,
         "run_id": f"synthetic-run-{index}",
@@ -65,7 +83,7 @@ class AgentSystemsLabConformanceTests(unittest.TestCase):
         manifest = json.loads((Path(__file__).parents[1] / "conformance" / "agent-systems-lab.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schema"], "agent-proof-lab-conformance/v1")
         self.assertEqual({item["schema"] for item in manifest["adapters"]}, {
-            "agent-policy/v1", "agent-policy/receipt/v1", "agent-sandbox/v1", "agent-eval/v1", "agent-trace/v1", "context-pack/v1", "agent-resume/v1", "context-integrity/v1", "sourcemark/check/v1"
+            "agent-policy/v1", "agent-policy/receipt/v1", "agent-sandbox/v1", "agent-sandbox/v2", "agent-eval/v1", "agent-trace/v1", "context-pack/v1", "agent-resume/v1", "context-integrity/v1", "sourcemark/check/v1"
         })
 
     def test_every_manifest_adapter_normalizes_without_leaking_private_values(self):
