@@ -164,10 +164,12 @@ declares it. An unknown schema or malformed input refuses the complete collectio
 ### 6. Normalize a sibling envelope without losing unknowns
 
 The optional interoperability adapter gives policy, sandbox, evaluation, trace, context-pack,
-resume, Context Integrity, and Agent Proof envelopes one loss-aware handoff contract. It stores the source byte
-digest, source schema, adapter kind, hashed identity fields, and a small allowlisted projection of
-status and metrics. Missing fields remain explicit unknowns; raw source values never cross the
-boundary.
+resume, Context Integrity, Forgeyard shared evidence, and Agent Proof envelopes one loss-aware
+handoff contract. It stores the source byte digest, source schema, adapter kind, hashed identity
+fields, and a small allowlisted projection of status and metrics. Missing fields remain explicit
+unknowns; raw source values never cross the boundary. The Forgeyard `ai-work-evidence/v1` adapter
+also preserves its four source statuses and bounded artifact metadata while refusing unsupported
+versions, unsafe artifact names, malformed hashes, and malformed documents.
 
 ```console
 agent-proof normalize ./run-files/evaluation.json \
@@ -213,8 +215,9 @@ and run hashes.
 | `agent-proof/interop-verify/v1` | Source-bound or unbound interoperability verification result |
 
 Sibling outputs are treated as evidence files, not instructions. The demo and tests exercise
-`agent-policy/v1`, `agent-sandbox/v1`, `agent-eval/v1`, and `context-integrity/v1`; adapters remain optional because the
-package has zero runtime dependencies.
+`agent-policy/v1`, `agent-sandbox/v1`, `agent-eval/v1`, `context-integrity/v1`, and the public
+Forgeyard `ai-work-evidence/v1` corpus; adapters remain optional because the package has zero
+runtime dependencies.
 
 ## Security and privacy boundary
 

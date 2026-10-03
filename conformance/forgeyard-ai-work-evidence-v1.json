@@ -1,0 +1,126 @@
+{
+  "schema": "agent-proof-consumer-conformance/v1",
+  "contract": "ai-work-evidence/v1",
+  "owner": "forgeyard",
+  "upstream": "https://github.com/jonah-ux/forgeyard/blob/157ccbabc4c622848de2a1c0547bbc6ad5863a69/conformance/manifest.json",
+  "cases": [
+    {
+      "name": "valid-observed",
+      "valid": true,
+      "status": "observed",
+      "payload": {
+        "artifacts": [
+          {
+            "name": "receipt.json",
+            "size": 12,
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "created_at": "2026-01-01T00:00:00Z",
+        "evidence_id": "fixture:observed",
+        "provenance": {"fixture": "agent-systems-lab"},
+        "schema": "ai-work-evidence/v1",
+        "source": "atlas",
+        "source_version": "0.2.0",
+        "status": "observed",
+        "subject": "synthetic receipt",
+        "summary": "bounded fixture"
+      }
+    },
+    {
+      "name": "status-unknown",
+      "valid": true,
+      "status": "unknown",
+      "payload": {
+        "artifacts": [],
+        "created_at": "2026-01-01T00:00:00Z",
+        "evidence_id": "fixture:unknown",
+        "provenance": {"fixture": "agent-systems-lab"},
+        "schema": "ai-work-evidence/v1",
+        "source": "atlas",
+        "source_version": "0.2.0",
+        "status": "unknown",
+        "subject": "synthetic pending receipt",
+        "summary": "bounded fixture"
+      }
+    },
+    {
+      "name": "status-failed",
+      "valid": true,
+      "status": "failed",
+      "payload": {
+        "artifacts": [],
+        "created_at": "2026-01-01T00:00:00Z",
+        "evidence_id": "fixture:failed",
+        "provenance": {"fixture": "agent-systems-lab"},
+        "schema": "ai-work-evidence/v1",
+        "source": "atlas",
+        "source_version": "0.2.0",
+        "status": "failed",
+        "subject": "synthetic failed receipt",
+        "summary": "bounded fixture"
+      }
+    },
+    {
+      "name": "unknown-version",
+      "valid": false,
+      "payload": {
+        "artifacts": [],
+        "created_at": "2026-01-01T00:00:00Z",
+        "evidence_id": "fixture:version",
+        "provenance": {"fixture": "agent-systems-lab"},
+        "schema": "ai-work-evidence/v2",
+        "source": "atlas",
+        "source_version": "0.2.0",
+        "status": "observed",
+        "subject": "synthetic version drift",
+        "summary": "bounded fixture"
+      }
+    },
+    {
+      "name": "unsafe-artifact",
+      "valid": false,
+      "payload": {
+        "artifacts": [
+          {
+            "name": "../secret.txt",
+            "size": 12,
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "created_at": "2026-01-01T00:00:00Z",
+        "evidence_id": "fixture:path",
+        "provenance": {"fixture": "agent-systems-lab"},
+        "schema": "ai-work-evidence/v1",
+        "source": "atlas",
+        "source_version": "0.2.0",
+        "status": "observed",
+        "subject": "synthetic path",
+        "summary": "bounded fixture"
+      }
+    },
+    {
+      "name": "bad-hash",
+      "valid": false,
+      "payload": {
+        "artifacts": [
+          {"name": "receipt.json", "size": 12, "sha256": "not-a-digest"}
+        ],
+        "created_at": "2026-01-01T00:00:00Z",
+        "evidence_id": "fixture:hash",
+        "provenance": {"fixture": "agent-systems-lab"},
+        "schema": "ai-work-evidence/v1",
+        "source": "atlas",
+        "source_version": "0.2.0",
+        "status": "observed",
+        "subject": "synthetic hash",
+        "summary": "bounded fixture"
+      }
+    },
+    {
+      "name": "malformed",
+      "valid": false,
+      "payload": ["not", "an", "evidence", "object"]
+    }
+  ]
+}
