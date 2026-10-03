@@ -18,14 +18,20 @@ result happened. `observed`, `partial`, and `unknowns` remain explicit in every 
 
 ## Try the complete workflow
 
+This route checks out the published `v0.3.1` prerelease so the bundled demo is present.
+
 ```console
-python3 -m pip install git+https://github.com/jonah-ux/agent-proof.git@v0.3.1
+git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+cd agent-proof
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install .
 agent-proof --version
 python3 demos/demo.py
 ```
 
 The [standalone evidence-chain walkthrough](docs/walkthrough/index.html) turns the same
-synthetic flow into a clickable visual readback. It uses fixture data only, includes a live
+synthetic flow into a clickable visual readback. It uses fixture data only, includes an illustrative
 tamper-refusal interaction, and links back to the source files and published release.
 
 Agent Proof is intentionally installable and runnable on its own. It has no runtime dependency

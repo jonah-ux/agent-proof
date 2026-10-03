@@ -127,7 +127,7 @@
   <main class="shell">
     <header class="topbar">
       <span class="mark">AGENT PROOF / FIELD GUIDE</span>
-      <span>v0.3.1 · synthetic fixture · no network calls</span>
+      <span>v0.3.1 prerelease · synthetic fixture · no network calls</span>
     </header>
 
     <section class="hero" aria-labelledby="title">
@@ -178,12 +178,16 @@
       <article class="panel walkthrough">
         <div class="panel-head"><div><div class="panel-kicker">03 / quick start</div><h2>From empty directory to readback</h2></div><span class="tag">copy / paste</span></div>
         <ol class="step-list">
-          <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Pin to <code>v0.3.1</code> so the command and docs agree.</span></div></li>
+          <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Check out the <code>v0.3.1</code> prerelease so the bundled demo exists.</span></div></li>
           <li class="step"><span class="step-no">2</span><div><strong>Run the synthetic demo</strong><span>It creates temporary policy, sandbox, evaluation, and artifact fixtures.</span></div></li>
           <li class="step"><span class="step-no">3</span><div><strong>Read the refusal</strong><span>The demo mutates an artifact, verifies the old proof, and expects a failed readback.</span></div></li>
         </ol>
-        <div class="terminal" aria-label="Install and demo commands"><code>python3 -m pip install git+https://github.com/jonah-ux/agent-proof.git@v0.3.1
-python3 -m agent_proof.cli --version
+        <div class="terminal" aria-label="Install and demo commands"><code>git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+cd agent-proof
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install .
+agent-proof --version
 python3 demos/demo.py</code></div>
       </article>
 
