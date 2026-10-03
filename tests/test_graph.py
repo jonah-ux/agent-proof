@@ -1,13 +1,15 @@
 import copy
+import io
 import json
-from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from agent_proof.cli import main
 from agent_proof.graph import graph_document, verify_graph
-from agent_proof.ledger import ProofError, append_record, build_record, digest_json, export_bundle, make_ledger, merge_run, verify_bundle, verify_document, write_json
+from agent_proof.ledger import ProofError, append_record, build_record, digest_json, export_bundle, make_ledger, merge_run, record_digest, verify_bundle, verify_document, write_json
 
 
 class ProvenanceGraphTests(unittest.TestCase):
@@ -184,6 +186,198 @@ class ProvenanceGraphTests(unittest.TestCase):
             graph_document({"schema": "agent-proof/v1", "sha256": "0" * 64})
         with self.assertRaises(ProofError):
             graph_document({"schema": "agent-proof/collect/v2", "ledger": {}})
+
+    def test_graph_field_shapes_return_structured_refusals(self):
+        baseline = graph_document(self._run(), artifact_root=self.root)
+        mutations = (
+            ("input_schema", []),
+            ("input_schema", {}),
+            ("source_state", []),
+            ("artifact_state", {}),
+            ("unknowns", None),
+            ("unknowns", 1),
+            ("unknowns", {"fixture": "value"}),
+            ("unknowns", [{}]),
+            ("repository", []),
+            ("repository", {"extra": "synthetic-sensitive-marker"}),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field, value=value):
+                malformed = copy.deepcopy(baseline)
+                malformed[field] = value
+                malformed["graph_sha256"] = digest_json({
+                    key: item for key, item in malformed.items()
+                    if key != "graph_sha256"
+                })
+                result = verify_graph(malformed)
+                self.assertIs(result["ok"], False, result)
+                self.assertTrue(result["errors"], result)
+                json.dumps(result)
+
+    def test_node_and_edge_shapes_do_not_escape_verification(self):
+        baseline = graph_document(self._run(), artifact_root=self.root)
+        mutations = (
+            ("node", "kind", []),
+            ("node", "kind", {}),
+            ("evidence", "paths", None),
+            ("evidence", "roles", 1),
+            ("evidence", "schemas", None),
+            ("edge", "from", []),
+            ("edge", "from", {}),
+            ("edge", "to", []),
+            ("edge", "to", {}),
+            ("edge", "kind", []),
+            ("edge", "kind", {}),
+            ("continues", "sequence", "2"),
+            ("continues", "sequence", {}),
+        )
+        for category, field, value in mutations:
+            with self.subTest(category=category, field=field, value=value):
+                malformed = copy.deepcopy(baseline)
+                if category == "node":
+                    target = malformed["nodes"][0]
+                elif category == "evidence":
+                    target = next(
+                        node for node in malformed["nodes"]
+                        if node["kind"] == "evidence"
+                    )
+                elif category == "continues":
+                    target = next(
+                        edge for edge in malformed["edges"]
+                        if edge["kind"] == "continues"
+                    )
+                else:
+                    target = malformed["edges"][0]
+                target[field] = value
+                malformed["graph_sha256"] = digest_json({
+                    key: item for key, item in malformed.items()
+                    if key != "graph_sha256"
+                })
+                result = verify_graph(malformed)
+                self.assertIs(result["ok"], False, result)
+                self.assertTrue(result["errors"], result)
+                json.dumps(result)
+
+    def test_graph_counts_require_json_integers(self):
+        baseline = graph_document(self._run(), artifact_root=self.root)
+        for field in ("node_count", "edge_count"):
+            for value in (float(baseline[field]), True, False):
+                with self.subTest(field=field, value=value):
+                    malformed = copy.deepcopy(baseline)
+                    malformed[field] = value
+                    malformed["graph_sha256"] = digest_json({
+                        key: item for key, item in malformed.items()
+                        if key != "graph_sha256"
+                    })
+                    result = verify_graph(malformed)
+                    self.assertIs(result["ok"], False, result)
+                    self.assertIn(f"{field} must be an integer", result["errors"])
+
+    def test_record_node_fields_are_checked_without_source_binding(self):
+        baseline = graph_document(self._run(), artifact_root=self.root)
+        mutations = (
+            ("observed", []), ("partial", {}), ("prev_sha256", {}),
+            ("run_id", []), ("run_id", "other-run"), ("unknowns", None),
+            ("unknowns", [{}]), ("unknowns", ["z", "a"]),
+            ("unknowns", ["a", "a"]), ("unexpected", {}),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field, value=value):
+                malformed = copy.deepcopy(baseline)
+                node = next(item for item in malformed["nodes"] if item["id"].startswith("record:"))
+                node[field] = value
+                malformed["graph_sha256"] = digest_json({
+                    key: item for key, item in malformed.items()
+                    if key != "graph_sha256"
+                })
+                result = verify_graph(malformed)
+                self.assertIs(result["ok"], False, result)
+                self.assertIs(result["bound_input"], False)
+                self.assertTrue(result["errors"], result)
+
+    def test_graph_builder_normalizes_repeated_record_unknowns(self):
+        record = build_record(self._spec(), artifact_root=self.root)
+        record["result"]["unknowns"] = ["z", "a", "a"]
+        record["record_sha256"] = record_digest(record)
+        graph = graph_document(record, artifact_root=self.root)
+        node = next(item for item in graph["nodes"] if item["id"].startswith("record:"))
+        self.assertEqual(node["unknowns"], ["a", "z"])
+        self.assertIs(verify_graph(graph)["ok"], True)
+
+    def test_graph_builder_rejects_non_string_schema(self):
+        for schema in (None, [], {}, True):
+            with self.subTest(schema=schema):
+                with self.assertRaises(ProofError):
+                    graph_document({"schema": schema})
+
+    def test_malformed_source_records_are_refused_by_graph_api_and_cli(self):
+        baseline = build_record(self._spec(), artifact_root=self.root)
+        mutations = [("unknowns", value) for value in (None, 1, True, {}, "abc", [1], [{}])]
+        mutations.extend(("sequence", value) for value in (True, 1.0))
+        mutations.extend(("run_id", value) for value in (None, [], ""))
+        mutations.extend((field, value) for field in ("observed", "partial") for value in (None, [], {}))
+        mutations.append(("repository", []))
+        source = self.root / "malformed.record.json"
+        output = self.root / "refused.graph.json"
+        for field, value in mutations:
+            with self.subTest(field=field, value=value):
+                record = copy.deepcopy(baseline)
+                if field in {"unknowns", "observed", "partial"}:
+                    record["result"][field] = value
+                    error = (
+                        "result.unknowns must be a list of strings" if field == "unknowns"
+                        else f"result.{field} must be boolean"
+                    )
+                elif field == "sequence":
+                    record[field] = value
+                    error = "sequence is missing or invalid"
+                elif field == "run_id":
+                    record[field] = value
+                    error = "run_id is missing or malformed"
+                else:
+                    record[field] = value
+                    error = "repository must be an object"
+                record["record_sha256"] = record_digest(record)
+                with self.assertRaisesRegex(ProofError, error):
+                    graph_document(record, artifact_root=self.root)
+                write_json(source, record)
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    exit_code = main([
+                        "graph", str(source), "--artifact-root", str(self.root),
+                        "--out", str(output),
+                    ])
+                self.assertEqual(exit_code, 2)
+                report = json.loads(stdout.getvalue())
+                self.assertEqual(report["schema"], "agent-proof/error/v2")
+                self.assertIs(report["ok"], False)
+                self.assertIn(error, report["error"])
+                self.assertFalse(output.exists())
+
+    def test_cli_malformed_graph_returns_one_json_refusal(self):
+        malformed = graph_document(self._run(), artifact_root=self.root)
+        malformed["unknowns"] = None
+        malformed["graph_sha256"] = digest_json({
+            key: item for key, item in malformed.items()
+            if key != "graph_sha256"
+        })
+        path = self.root / "malformed.graph.json"
+        write_json(path, malformed)
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(["verify-graph", str(path)])
+        self.assertEqual(exit_code, 1)
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(report["schema"], "agent-proof/graph-verify/v1")
+        self.assertIs(report["ok"], False)
+        self.assertIn("unknowns must be a list of strings", report["errors"])
+
+    def test_invalid_graph_schema_does_not_echo_input_value(self):
+        malformed = graph_document(self._run(), artifact_root=self.root)
+        malformed["schema"] = "synthetic-sensitive-marker"
+        result = verify_graph(malformed)
+        self.assertIs(result["ok"], False)
+        self.assertNotIn("synthetic-sensitive-marker", json.dumps(result))
 
     def test_cli_graph_and_bound_readback(self):
         run = self._run()

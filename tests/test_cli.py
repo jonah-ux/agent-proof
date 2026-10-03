@@ -55,6 +55,52 @@ class ProofLedgerTests(unittest.TestCase):
         self.assertEqual(record["record_sha256"], record_digest(record))
         self.assertEqual(verify_document(record, artifact_root=self.root)["ok"], True)
 
+    def test_record_unknowns_require_a_list_of_strings(self):
+        baseline = build_record(self.spec(), artifact_root=self.root)
+        for unknowns in (None, 1, True, {}, "abc", [1], [{}]):
+            with self.subTest(unknowns=unknowns):
+                record = copy.deepcopy(baseline)
+                record["result"]["unknowns"] = unknowns
+                record["record_sha256"] = record_digest(record)
+                result = verify_document(record, artifact_root=self.root)
+                self.assertIs(result["ok"], False, result)
+                self.assertIn("result.unknowns must be a list of strings", result["errors"])
+                self.assertEqual(result["unknowns"], [])
+
+    def test_record_sequence_requires_a_positive_json_integer(self):
+        baseline = build_record(self.spec(), artifact_root=self.root)
+        for sequence in (None, 0, -1, "1", 1.0, True, False, []):
+            with self.subTest(sequence=sequence):
+                record = copy.deepcopy(baseline)
+                record["sequence"] = sequence
+                record["record_sha256"] = record_digest(record)
+                result = verify_document(record, artifact_root=self.root)
+                self.assertIs(result["ok"], False, result)
+                self.assertIn("sequence is missing or invalid", result["errors"])
+
+    def test_record_observation_and_partial_fields_require_booleans(self):
+        baseline = build_record(self.spec(), artifact_root=self.root)
+        for field in ("observed", "partial"):
+            for value in (None, 0, 1, "true", [], {}):
+                with self.subTest(field=field, value=value):
+                    record = copy.deepcopy(baseline)
+                    record["result"][field] = value
+                    record["record_sha256"] = record_digest(record)
+                    result = verify_document(record, artifact_root=self.root)
+                    self.assertIs(result["ok"], False, result)
+                    self.assertIn(f"result.{field} must be boolean", result["errors"])
+
+    def test_record_repository_requires_canonical_native_fields(self):
+        baseline = build_record(self.spec(), artifact_root=self.root)
+        for repository in (None, [], "repo", {"url": []}, {"commit": "bad"}, {"extra": "value"}):
+            with self.subTest(repository=repository):
+                record = copy.deepcopy(baseline)
+                record["repository"] = repository
+                record["record_sha256"] = record_digest(record)
+                result = verify_document(record, artifact_root=self.root)
+                self.assertIs(result["ok"], False, result)
+                self.assertTrue(any("repository" in error for error in result["errors"]))
+
     def test_chain_and_merge_preserve_observation(self):
         ledger = make_ledger("run-1")
         ledger = append_record(ledger, build_record(self.spec(), artifact_root=self.root), artifact_root=self.root)

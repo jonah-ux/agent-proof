@@ -16,6 +16,7 @@ from .ledger import (
     ProofError,
     _HEX64,
     _safe_relative,
+    _verify_repository,
     digest_json,
     verify_document,
 )
@@ -26,12 +27,25 @@ GRAPH_VERIFY_SCHEMA = "agent-proof/graph-verify/v1"
 SUPPORTED_INPUT_SCHEMAS = {RECORD_SCHEMA, LEDGER_SCHEMA, RUN_SCHEMA}
 
 
+def _string_member(value: Any, choices: set[str]) -> bool:
+    return isinstance(value, str) and value in choices
+
+
+def _list_field(node: dict[str, Any], field: str) -> list[Any]:
+    value = node.get(field)
+    return value if isinstance(value, list) else []
+
+
 def _records(document: dict[str, Any]) -> list[dict[str, Any]]:
     schema = document.get("schema")
     if schema == RECORD_SCHEMA:
         return [document]
     records = document.get("records")
-    if schema in {LEDGER_SCHEMA, RUN_SCHEMA} and isinstance(records, list) and all(isinstance(item, dict) for item in records):
+    if (
+        _string_member(schema, {LEDGER_SCHEMA, RUN_SCHEMA})
+        and isinstance(records, list)
+        and all(isinstance(item, dict) for item in records)
+    ):
         return list(records)
     raise ProofError(f"graph input must use record/v2, ledger/v2, or run/v2; got {schema!r}")
 
@@ -92,9 +106,11 @@ def graph_document(
 ) -> dict[str, Any]:
     """Derive a stable graph from a verified v2 record, ledger, or run."""
 
-    if not isinstance(document, dict) or document.get("schema") not in SUPPORTED_INPUT_SCHEMAS:
-        schema = document.get("schema") if isinstance(document, dict) else None
-        raise ProofError(f"graph input must use record/v2, ledger/v2, or run/v2; got {schema!r}")
+    if (
+        not isinstance(document, dict)
+        or not _string_member(document.get("schema"), SUPPORTED_INPUT_SCHEMAS)
+    ):
+        raise ProofError("graph input must use record/v2, ledger/v2, or run/v2")
     verification = verify_document(document, artifact_root=artifact_root)
     errors = list(verification["errors"])
     if require_observed and not verification["observed"]:
@@ -139,7 +155,7 @@ def graph_document(
             "run_id": record.get("run_id", run_id),
             "observed": result.get("observed") is True,
             "partial": result.get("partial") is True,
-            "unknowns": sorted(item for item in result.get("unknowns", []) if isinstance(item, str)),
+            "unknowns": sorted(set(result.get("unknowns", []))),
         }
 
     edges: list[dict[str, Any]] = []
@@ -187,7 +203,14 @@ def graph_document(
 def _has_cycle(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> bool:
     adjacency: dict[str, list[str]] = {node["id"]: [] for node in nodes if isinstance(node, dict) and isinstance(node.get("id"), str)}
     for edge in edges:
-        if isinstance(edge, dict) and edge.get("kind") in {"contains", "continues"} and edge.get("from") in adjacency and edge.get("to") in adjacency:
+        if (
+            isinstance(edge, dict)
+            and _string_member(edge.get("kind"), {"contains", "continues"})
+            and isinstance(edge.get("from"), str)
+            and isinstance(edge.get("to"), str)
+            and edge["from"] in adjacency
+            and edge["to"] in adjacency
+        ):
             adjacency[edge["from"]].append(edge["to"])
     visiting: set[str] = set()
     visited: set[str] = set()
@@ -224,24 +247,35 @@ def verify_graph(
         errors.append("graph must be an object")
         graph = {}
     if graph.get("schema") != GRAPH_SCHEMA:
-        errors.append(f"unsupported graph schema: {graph.get('schema')!r}")
-    if graph.get("input_schema") not in SUPPORTED_INPUT_SCHEMAS:
+        errors.append("unsupported graph schema")
+    input_schema = graph.get("input_schema")
+    if not _string_member(input_schema, SUPPORTED_INPUT_SCHEMAS):
         errors.append("input_schema is unsupported")
+        input_schema = None
     for key in ("input_sha256", "input_claim_sha256"):
         if not isinstance(graph.get(key), str) or not _HEX64.fullmatch(graph[key]):
             errors.append(f"{key} is missing or malformed")
     if not isinstance(graph.get("run_id"), str) or not graph["run_id"]:
         errors.append("run_id is missing or malformed")
-    if graph.get("source_state") not in {"verified", "unverified", "invalid", "unknown"}:
+    _verify_repository(graph.get("repository", {}), errors)
+    if not _string_member(
+        graph.get("source_state"), {"verified", "unverified", "invalid", "unknown"}
+    ):
         errors.append("source_state is invalid")
-    if graph.get("artifact_state") not in {"verified", "unverified", "invalid", "unknown"}:
+    if not _string_member(
+        graph.get("artifact_state"), {"verified", "unverified", "invalid", "unknown"}
+    ):
         errors.append("artifact_state is invalid")
     if not isinstance(graph.get("observed"), bool):
         errors.append("observed must be boolean")
     if not isinstance(graph.get("partial"), bool):
         errors.append("partial must be boolean")
-    if not isinstance(graph.get("unknowns"), list) or any(not isinstance(item, str) for item in graph.get("unknowns", [])):
+    raw_unknowns = graph.get("unknowns")
+    if not isinstance(raw_unknowns, list) or any(
+        not isinstance(item, str) for item in raw_unknowns
+    ):
         errors.append("unknowns must be a list of strings")
+    raw_unknowns = raw_unknowns if isinstance(raw_unknowns, list) else []
     supplied_hash = graph.get("graph_sha256")
     unsigned = {key: value for key, value in graph.items() if key != "graph_sha256"}
     if not isinstance(supplied_hash, str) or not _HEX64.fullmatch(supplied_hash):
@@ -267,7 +301,7 @@ def verify_graph(
         node_ids.add(node["id"])
         nodes_by_id[node["id"]] = node
         kind = node.get("kind")
-        if kind not in {"run", "ledger", "record", "evidence"}:
+        if not _string_member(kind, {"run", "ledger", "record", "evidence"}):
             errors.append(f"nodes[{index}] has an unsupported kind")
         digest = node.get("sha256")
         if not isinstance(digest, str) or not _HEX64.fullmatch(digest):
@@ -276,16 +310,30 @@ def verify_graph(
             errors.append(f"nodes[{index}] id does not end with its sha256")
         node_id = node.get("id") if isinstance(node.get("id"), str) else ""
         if node_id.startswith("container:"):
-            if kind not in {"run", "ledger", "record"}:
+            allowed_keys = {"id", "kind", "sha256", "run_id"}
+            if not _string_member(kind, {"run", "ledger", "record"}):
                 errors.append(f"nodes[{index}] container id has an invalid kind")
         elif node_id.startswith("record:"):
+            allowed_keys = {
+                "id", "kind", "sha256", "sequence", "prev_sha256", "run_id",
+                "observed", "partial", "unknowns",
+            }
             if kind != "record":
                 errors.append(f"nodes[{index}] record id has an invalid kind")
         elif node_id.startswith("blob:"):
+            allowed_keys = {"id", "kind", "sha256", "roles", "paths", "schemas"}
             if kind != "evidence":
                 errors.append(f"nodes[{index}] blob id has an invalid kind")
         else:
+            allowed_keys = {"id", "kind", "sha256"}
             errors.append(f"nodes[{index}] id prefix is invalid")
+        if set(node) - allowed_keys:
+            errors.append(f"nodes[{index}] contains unsupported fields")
+        if node_id.startswith(("container:", "record:")):
+            if not isinstance(node.get("run_id"), str) or not node["run_id"]:
+                errors.append(f"nodes[{index}] run_id is missing or malformed")
+            elif node["run_id"] != graph.get("run_id"):
+                errors.append(f"nodes[{index}] run_id does not match the graph")
         if isinstance(digest, str):
             expected_id_prefix = "blob" if kind == "evidence" else "container" if node_id.startswith("container:") else "record"
             if node_id != f"{expected_id_prefix}:{digest}":
@@ -293,6 +341,22 @@ def verify_graph(
         # A standalone record container has kind "record" but no chain sequence.
         if node_id.startswith("record:") and (type(node.get("sequence")) is not int or node.get("sequence", 0) < 1):
             errors.append(f"nodes[{index}] record sequence is invalid")
+        if node_id.startswith("record:"):
+            for field in ("observed", "partial"):
+                if not isinstance(node.get(field), bool):
+                    errors.append(f"nodes[{index}] {field} must be boolean")
+            previous = node.get("prev_sha256")
+            if previous is not None and (
+                not isinstance(previous, str) or not _HEX64.fullmatch(previous)
+            ):
+                errors.append(f"nodes[{index}] prev_sha256 is malformed")
+            node_unknowns = node.get("unknowns")
+            if not isinstance(node_unknowns, list) or not all(
+                isinstance(item, str) for item in node_unknowns
+            ):
+                errors.append(f"nodes[{index}] unknowns must be a list of strings")
+            elif node_unknowns != sorted(set(node_unknowns)):
+                errors.append(f"nodes[{index}] unknowns are not sorted and unique")
         if kind == "evidence":
             if not isinstance(node.get("roles"), list) or not node["roles"] or any(not isinstance(item, str) for item in node["roles"]):
                 errors.append(f"nodes[{index}] evidence roles are missing")
@@ -325,16 +389,23 @@ def verify_graph(
         for key in ("from", "to", "kind"):
             if not isinstance(edge.get(key), str) or not edge[key]:
                 errors.append(f"edges[{index}] is missing {key}")
-        if edge.get("from") not in node_ids:
+        source_id = edge.get("from") if isinstance(edge.get("from"), str) else None
+        target_id = edge.get("to") if isinstance(edge.get("to"), str) else None
+        if source_id not in node_ids:
             errors.append(f"edges[{index}] references an unknown from node")
-        if edge.get("to") not in node_ids:
+        if target_id not in node_ids:
             errors.append(f"edges[{index}] references an unknown to node")
-        source = nodes_by_id.get(edge.get("from"))
-        target = nodes_by_id.get(edge.get("to"))
-        kind = edge.get("kind")
+        source = nodes_by_id.get(source_id)
+        target = nodes_by_id.get(target_id)
+        kind = edge.get("kind") if isinstance(edge.get("kind"), str) else None
         if source is not None and target is not None:
             valid_relation = (
-                (kind == "contains" and isinstance(edge.get("from"), str) and edge["from"].startswith("container:") and source.get("kind") in {"run", "ledger", "record"} and target.get("kind") == "record")
+                (
+                    kind == "contains"
+                    and source_id.startswith("container:")
+                    and _string_member(source.get("kind"), {"run", "ledger", "record"})
+                    and target.get("kind") == "record"
+                )
                 or (kind == "continues" and source.get("kind") == "record" and target.get("kind") == "record")
                 or (kind == "supports" and source.get("kind") == "evidence" and target.get("kind") == "record" and edge.get("role") == "source")
                 or (kind == "produces" and source.get("kind") == "record" and target.get("kind") == "evidence" and edge.get("role") == "artifact")
@@ -365,29 +436,60 @@ def verify_graph(
             errors.append(f"edges[{index}] source schema is malformed")
         if kind == "produces" and "schema" in edge:
             errors.append(f"edges[{index}] artifact relation may not carry a schema")
-        if kind in {"contains", "continues"} and target is not None and isinstance(edge.get("sequence"), int):
+        if (
+            kind in {"contains", "continues"}
+            and target is not None
+            and type(edge.get("sequence")) is int
+        ):
             if target.get("sequence") != edge["sequence"]:
                 errors.append(f"edges[{index}] sequence does not match target record")
-        if kind == "continues" and source is not None and target is not None and isinstance(source.get("sequence"), int) and source.get("sequence") >= edge.get("sequence", 0):
+        if (
+            kind == "continues"
+            and source is not None
+            and target is not None
+            and type(source.get("sequence")) is int
+            and type(edge.get("sequence")) is int
+            and source["sequence"] >= edge["sequence"]
+        ):
             errors.append(f"edges[{index}] continues edge does not move forward")
         if kind == "continues" and source is not None and target is not None and target.get("prev_sha256") != source.get("sha256"):
             errors.append(f"edges[{index}] continues edge does not match target prev_sha256")
-        if kind == "supports" and source is not None and edge.get("path") not in source.get("paths", []):
+        if (
+            kind == "supports" and source is not None
+            and edge.get("path") not in _list_field(source, "paths")
+        ):
             errors.append(f"edges[{index}] source path is not present on the evidence node")
-        if kind == "supports" and source is not None and edge.get("role") not in source.get("roles", []):
+        if (
+            kind == "supports" and source is not None
+            and edge.get("role") not in _list_field(source, "roles")
+        ):
             errors.append(f"edges[{index}] source role is not present on the evidence node")
-        if kind == "supports" and source is not None and edge.get("schema") is not None and edge.get("schema") not in source.get("schemas", []):
+        if (
+            kind == "supports" and source is not None
+            and edge.get("schema") is not None
+            and edge.get("schema") not in _list_field(source, "schemas")
+        ):
             errors.append(f"edges[{index}] source schema is not present on the evidence node")
-        if kind == "produces" and source is not None and edge.get("path") not in nodes_by_id.get(edge.get("to"), {}).get("paths", []):
+        if (
+            kind == "produces" and target is not None
+            and edge.get("path") not in _list_field(target, "paths")
+        ):
             errors.append(f"edges[{index}] artifact path is not present on the evidence node")
-        if kind == "produces" and target is not None and edge.get("role") not in target.get("roles", []):
+        if (
+            kind == "produces" and target is not None
+            and edge.get("role") not in _list_field(target, "roles")
+        ):
             errors.append(f"edges[{index}] artifact role is not present on the evidence node")
         key = _edge_key(edge)
         if key in edge_keys:
             errors.append(f"duplicate graph edge: {key}")
         edge_keys.add(key)
+    if type(graph.get("node_count")) is not int:
+        errors.append("node_count must be an integer")
     if graph.get("node_count") != len(nodes):
         errors.append("node_count does not match nodes")
+    if type(graph.get("edge_count")) is not int:
+        errors.append("edge_count must be an integer")
     if graph.get("edge_count") != len(edges):
         errors.append("edge_count does not match edges")
     containers = [node for node in nodes if isinstance(node, dict) and isinstance(node.get("id"), str) and node["id"].startswith("container:")]
@@ -395,7 +497,9 @@ def verify_graph(
         errors.append("graph must contain exactly one container node")
     elif containers[0].get("sha256") != graph.get("input_claim_sha256"):
         errors.append("container sha256 does not match input_claim_sha256")
-    elif containers[0].get("kind") != {RECORD_SCHEMA: "record", LEDGER_SCHEMA: "ledger", RUN_SCHEMA: "run"}.get(graph.get("input_schema")):
+    elif containers[0].get("kind") != {
+        RECORD_SCHEMA: "record", LEDGER_SCHEMA: "ledger", RUN_SCHEMA: "run"
+    }.get(input_schema):
         errors.append("container kind does not match input_schema")
     if nodes != sorted(nodes, key=lambda node: (str(node.get("kind", "")), str(node.get("id", ""))) if isinstance(node, dict) else ("", "")):
         errors.append("nodes are not in canonical order")
@@ -404,7 +508,7 @@ def verify_graph(
     if _has_cycle(nodes, edges):
         errors.append("graph contains a cycle")
 
-    unknowns = sorted(set(item for item in graph.get("unknowns", []) if isinstance(item, str)))
+    unknowns = sorted(set(item for item in raw_unknowns if isinstance(item, str)))
     input_state = "unbound"
     structural_ok = not errors
     if not bound_input:
