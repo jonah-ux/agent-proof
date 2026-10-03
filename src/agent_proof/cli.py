@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .compatibility import check_manifest
 from .graph import graph_document, verify_graph
 from .interop import normalize_envelope, verify_interop
 from .ledger import (
@@ -132,6 +133,16 @@ def parser() -> argparse.ArgumentParser:
     graph_verify.add_argument("--require-input", action="store_true")
     graph_verify.add_argument("--require-observed", action="store_true")
     graph_verify.add_argument("--require-artifacts", action="store_true")
+
+    compatibility = commands.add_parser(
+        "compatibility",
+        help="validate the Agent Systems Lab compatibility charter",
+    )
+    compatibility.add_argument(
+        "--manifest",
+        default="conformance/compatibility-v1.json",
+        help="path to an agent-systems-lab/compatibility/v1 manifest",
+    )
 
     return root
 
@@ -298,6 +309,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             _print(result)
             return 0 if result["ok"] else 1
+
+        if args.command == "compatibility":
+            result = check_manifest(_path(args.manifest))
+            _print(result)
+            return 0 if result["ok"] else 2
 
         raise ProofError(f"unsupported command: {args.command}")
     except (ProofError, OSError, json.JSONDecodeError) as exc:

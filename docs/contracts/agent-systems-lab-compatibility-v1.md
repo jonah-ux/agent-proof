@@ -19,12 +19,21 @@ The checker is dependency-free and reads only the checked-in manifest:
 
 ```console
 python3 scripts/check_compatibility.py --json
+
+# The same checker is available through the installed Agent Proof CLI when a
+# source-level manifest is supplied explicitly.
+agent-proof compatibility --manifest conformance/compatibility-v1.json
 ```
 
 The report contains a canonical manifest SHA-256. A clean report proves that the
 charter's own bytes satisfy the structural contract; it does not prove that every
 participant is deployed together, that a source is fresh, or that an outcome was
 observed.
+
+The current Agent Proof wheel does not include the repository-level `conformance/`
+tree, so installed callers must pass an explicit manifest path. The command
+returns exit `0` for a valid charter and exit `2` for a malformed or invalid
+charter; it never fetches sibling repositories or private configuration.
 
 ## Version and identity rules
 
