@@ -24,5 +24,5 @@ The Sourcemark adapter fixture in [`sourcemark-check-v1.json`](sourcemark-check-
 public `sourcemark/check/v1` source implementation and keeps the projection bounded to six counts
 and two `sha256:` identities. `ok` is the only state that maps to a successful outcome; `observed`,
 `partial`, and `timed_out` remain explicitly uncertain. Paths, quotes, transcript text, URLs, and
-ledger values never cross this boundary. The pinned source artifact is a temporary source-level
-owner reference until Sourcemark publishes its own Agent Systems Lab conformance manifest.
+ledger values never cross this boundary. Sourcemark now publishes the owner manifest at `sourcemark/check/v1`; Agent Proof pins both that
+owner manifest and the source implementation revision used by the adapter.
