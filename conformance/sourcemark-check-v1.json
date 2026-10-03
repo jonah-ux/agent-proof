@@ -4,16 +4,41 @@
   "source_owner": "sourcemark",
   "native_schema": "sourcemark/check/v1",
   "source_artifact": {
-    "url": "https://github.com/jonah-ux/sourcemark/blob/a62c2a777e8a62068f337f3df6899f88c94bbec7/src/sourcemark/check_export.py",
-    "revision": "a62c2a777e8a62068f337f3df6899f88c94bbec7",
+    "url": "https://github.com/jonah-ux/sourcemark/blob/a702abd0df3f59febdcfe43955d7b7ded3abd9a6/src/sourcemark/check_export.py",
+    "revision": "a702abd0df3f59febdcfe43955d7b7ded3abd9a6",
     "sha256": "895a94e1858cab912b2e63edd49a808639d5ef01b3b81433f311042d453d042d"
   },
   "projection": {
-    "metrics": ["total", "passing", "failing", "unknown", "observations", "timed_out"],
-    "digests": ["policy_sha256", "session_sha256"],
+    "metrics": [
+      "total",
+      "passing",
+      "failing",
+      "unknown",
+      "observations",
+      "timed_out"
+    ],
+    "digests": [
+      "policy_sha256",
+      "session_sha256"
+    ],
     "raw_fields_exported": false,
     "outcome_inference": false
   },
-  "states": ["ok", "observed", "partial", "timed_out"],
-  "refusals": ["unsupported_state", "invalid_count_set", "unreconciled_counts", "malformed_identity"]
+  "states": [
+    "ok",
+    "observed",
+    "partial",
+    "timed_out"
+  ],
+  "refusals": [
+    "unsupported_state",
+    "invalid_count_set",
+    "unreconciled_counts",
+    "malformed_identity"
+  ],
+  "owner_manifest": {
+    "url": "https://github.com/jonah-ux/sourcemark/blob/a702abd0df3f59febdcfe43955d7b7ded3abd9a6/conformance/agent-systems-lab.json",
+    "revision": "a702abd0df3f59febdcfe43955d7b7ded3abd9a6",
+    "sha256": "5ad3b3696a837956fc1f378171cd7fc30284cb568a9ebd689f8dbdf0eda39001"
+  }
 }
