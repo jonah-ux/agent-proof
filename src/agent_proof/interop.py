@@ -48,6 +48,12 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "identity": ("run_id", "receipt_id"),
         "metrics": ("duration_ms",),
     },
+    "agent-sandbox/v2": {
+        "kind": "sandbox",
+        "identity": (),
+        "metrics": ("duration_ms",),
+        "digests": ("command_sha256", "stdout_sha256", "stderr_sha256", "receipt_sha256"),
+    },
     "agent-eval/v1": {
         "kind": "evaluation",
         "identity": ("run_id", "evaluation_id", "candidate_id"),
@@ -57,6 +63,17 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "kind": "trace",
         "identity": ("run_id", "trace_id"),
         "metrics": ("duration_ms", "event_count", "span_count"),
+    },
+    "agent-trace/inspect/v1": {
+        "kind": "trace-inspect",
+        "identity": (),
+        "metrics": ("events", "source_lines", "blank_lines", "redactions"),
+        "digests": ("raw_sha256", "redacted_sha256"),
+    },
+    "agent-trace/query/v1": {
+        "kind": "trace-query",
+        "identity": (),
+        "metrics": ("matched",),
     },
     "context-pack/v1": {
         "kind": "context",
@@ -72,6 +89,16 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "kind": "context-integrity",
         "identity": ("person_id", "project_id"),
         "metrics": ("citation_count",),
+    },
+    "mcp-doctor/v1": {
+        "kind": "mcp-diagnostics",
+        "identity": ("fingerprint",),
+        "metrics": (),
+    },
+    "worktree-conservator.result/v1": {
+        "kind": "worktree",
+        "identity": ("command",),
+        "metrics": (),
     },
     FORGEYARD_EVIDENCE_SCHEMA: {
         "kind": "shared-evidence",
@@ -231,6 +258,20 @@ def _identity(payload: dict[str, Any], fields: tuple[str, ...], unknowns: list[s
     return result
 
 
+def _digests(payload: dict[str, Any], fields: tuple[str, ...], unknowns: list[str]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for field in fields:
+        if field not in payload:
+            unknowns.append(f"{field}_not_declared")
+            continue
+        value = payload[field]
+        if isinstance(value, str) and _HEX64.fullmatch(value):
+            result[field] = value
+        else:
+            unknowns.append(f"{field}_malformed")
+    return result
+
+
 def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Project allowlisted, non-secret values while recording omissions."""
 
@@ -288,11 +329,13 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
             unknowns.append(f"{key}_malformed")
             continue
         metrics[key] = value
+    digests = _digests(payload, adapter.get("digests", ()), unknowns)
     known_fields = sorted(
         set(field for field in _STATUS_FIELDS if field in payload)
         | set(field for field in ("exit_code",) if field in payload)
         | set(field for field in adapter["metrics"] if field in payload)
         | set(field for field in adapter["identity"] if field in payload)
+        | set(field for field in adapter.get("digests", ()) if field in payload)
     )
     return {
         "status": {
@@ -306,6 +349,7 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
         "identity": _identity(payload, adapter["identity"], unknowns),
         "metrics": metrics,
         "declared_fields": known_fields,
+        **({"digests": digests} if adapter.get("digests") else {}),
     }, _unique(unknowns)
 
 
@@ -468,12 +512,26 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
             allowed_metrics = set(ADAPTERS.get(source["schema"], {}).get("metrics", ()))
             if set(metrics) - allowed_metrics:
                 errors.append("projection.metrics contains an unsupported field")
+        digests = projection.get("digests")
+        if digests is not None:
+            if not isinstance(digests, dict) or any(
+                not isinstance(key, str)
+                or not isinstance(value, str)
+                or not _HEX64.fullmatch(value)
+                for key, value in (digests.items() if isinstance(digests, dict) else [])
+            ):
+                errors.append("projection.digests is malformed")
+            if isinstance(source, dict) and isinstance(source.get("schema"), str) and isinstance(digests, dict):
+                allowed_digests = set(ADAPTERS.get(source["schema"], {}).get("digests", ()))
+                if set(digests) - allowed_digests:
+                    errors.append("projection.digests contains an unsupported field")
         fields = projection.get("declared_fields")
         if not isinstance(fields, list) or fields != sorted(set(fields)) or any(not isinstance(item, str) for item in fields):
             errors.append("projection.declared_fields is malformed")
         if isinstance(source, dict) and isinstance(source.get("schema"), str) and isinstance(fields, list):
             adapter = ADAPTERS.get(source["schema"], {})
             allowed_fields = set(_STATUS_FIELDS) | {"exit_code"} | set(adapter.get("identity", ())) | set(adapter.get("metrics", ()))
+            allowed_fields |= set(adapter.get("digests", ()))
             if source["schema"] == FORGEYARD_EVIDENCE_SCHEMA:
                 allowed_fields |= {"artifacts", "status"}
             if set(fields) - allowed_fields:

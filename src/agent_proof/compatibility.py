@@ -226,8 +226,8 @@ def validate_manifest(payload: dict[str, Any]) -> list[dict[str, str]]:
         adapter_ids: set[str] = set()
         for entry in adapters:
             required = {"schema", "kind", "identity", "metrics", "source"}
-            if not isinstance(entry, dict) or set(entry) != required:
-                errors.append(_error("malformed_manifest", "each adapter must contain schema, kind, identity, metrics, and source"))
+            if not isinstance(entry, dict) or not required.issubset(entry) or set(entry) - (required | {"digests"}):
+                errors.append(_error("malformed_manifest", "each adapter must contain schema, kind, identity, metrics, source, and optional digests"))
                 continue
             schema = entry.get("schema")
             if not isinstance(schema, str) or not schema or schema in adapter_ids:
@@ -240,6 +240,10 @@ def validate_manifest(payload: dict[str, Any]) -> list[dict[str, str]]:
                 values = entry.get(field)
                 if not isinstance(values, list) or any(not isinstance(value, str) or not _IDENTIFIER.fullmatch(value) for value in values):
                     errors.append(_error("malformed_manifest", f"adapter {field} is invalid for {schema}"))
+            if "digests" in entry:
+                values = entry["digests"]
+                if not isinstance(values, list) or any(not isinstance(value, str) or not _IDENTIFIER.fullmatch(value) for value in values):
+                    errors.append(_error("malformed_manifest", f"adapter digests is invalid for {schema}"))
             if entry.get("source") != "src/agent_proof/interop.py:ADAPTERS":
                 errors.append(_error("malformed_manifest", f"adapter source is not the reviewed registry for {schema}"))
         if adapters != sorted(adapters, key=lambda item: item.get("schema", "") if isinstance(item, dict) else ""):
