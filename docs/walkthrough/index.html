@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A local, synthetic walkthrough of Agent Proof's evidence chain and tamper refusal.">
   <title>Agent Proof · evidence chain walkthrough</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230b0e0d%22/%3E%3Cpath d=%22M19 31 28 40 47 19%22 fill=%22none%22 stroke=%22%23a9f27d%22 stroke-width=%227%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
   <style>
     :root {
       color-scheme: dark;
@@ -124,6 +125,9 @@
 
     .hero-card{position:relative;overflow:hidden}.hero-card::after{content:"";position:absolute;right:-56px;top:-54px;width:170px;height:170px;border:1px solid #a9f27d2e;border-radius:50%;box-shadow:0 0 0 18px #a9f27d0d,0 0 0 36px #a9f27d08}.proof-radar{display:block;width:100%;height:auto;margin:0 0 17px}.proof-radar .spark{fill:var(--green);filter:drop-shadow(0 0 7px var(--green))}.mission-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}.mission-actions button{font-size:.68rem;padding:8px 10px}.mission-status{min-height:2.7em;margin:10px 0 0!important;font-size:.72rem!important}.chain-guide{display:flex;align-items:center;gap:9px;margin:0 0 18px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#0d1712;color:var(--muted);font-size:.72rem}.chain-guide strong{color:var(--green);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}.chain-guide span{height:1px;flex:1;background:linear-gradient(90deg,var(--green-dim),transparent)}.node[data-step]{cursor:pointer}.node[data-step][aria-current=true]{border-color:var(--green);background:#183122;box-shadow:0 0 0 2px #a9f27d1a}.node[data-step]:focus-visible{outline:2px solid var(--green);outline-offset:3px}.focus-copy{margin:13px 0 0!important;min-height:2.4em;color:var(--muted);font-size:.74rem}.state.fail + .actions button,.state.reset + .actions button{transition:none}
     @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+    .mission-actions button:nth-child(3){border-color:rgba(159,217,255,.35);color:var(--blue)}
+    @media (max-width: 520px) { .topbar { align-items: flex-start; flex-direction: column; gap: 8px; } .hero { gap: 18px; } .hero-card { padding: 17px; } .mission-actions button { flex: 1 1 100%; } .chain-guide { align-items: flex-start; flex-direction: column; } .chain-guide span { width: 100%; height: 1px; flex: 0 0 auto; } .node-wrap { min-width: 118px; } }
   </style>
 </head>
 <body>
@@ -150,7 +154,7 @@
         <h2>Install this repo. Run this repo.</h2>
         <p>Agent Proof ships as its own Python package with zero runtime dependencies. The proof format can interoperate with other envelopes, but no sibling Jonah-UX repository or service is required.</p>
         <div class="tag-row"><span class="tag">Python ≥ 3.11</span><span class="tag">MIT</span><span class="tag">CLI + library</span></div>
-        <div class="mission-actions" role="group" aria-label="Launch the synthetic proof readback"><button id="hero-seal" type="button">Seal fixture</button><button id="hero-refuse" type="button">Tamper + refuse</button></div><p id="mission-status" class="mission-status" role="status" aria-live="polite">Choose a readback to see the proof gate move.</p>
+        <div class="mission-actions" role="group" aria-label="Launch the synthetic proof readback"><button id="hero-seal" type="button">Seal fixture</button><button id="hero-refuse" type="button">Tamper + refuse</button><button id="hero-copy" type="button">Copy first run</button></div><p id="mission-status" class="mission-status" role="status" aria-live="polite">Choose a readback to see the proof gate move. The first-run commands are one click away.</p>
       </aside>
     </section>
 
@@ -246,6 +250,13 @@ python3 demos/demo.py</code></div>
     document.querySelector('#tamper').addEventListener('click', () => show('fail', 'REFUSED', 'artifact digest changed; stale proof cannot pass', 'tampered fixture', 'false', '1'));
     document.querySelector('#reset').addEventListener('click', () => show('reset', 'READY', 'fixture is waiting for a verification readback', 'reset', 'unknown', 'unknown'));
     document.querySelector('#hero-seal').addEventListener('click', () => document.querySelector('#verify').click());
+    document.querySelector('#hero-copy').addEventListener('click', async () => { const firstRun = `git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+cd agent-proof
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install .
+agent-proof --version
+python3 demos/demo.py`; try { await navigator.clipboard.writeText(firstRun); missionStatus.textContent = 'First-run commands copied. Run the local demo, then use Tamper + refuse here.'; } catch { missionStatus.textContent = 'Copy was unavailable; the full command block remains below for manual selection.'; } });
     document.querySelector('#hero-refuse').addEventListener('click', () => document.querySelector('#tamper').click());
   </script>
 </body>
