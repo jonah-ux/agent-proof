@@ -56,20 +56,41 @@ jobs:
           python -m pip install --upgrade build
           python -m build --sdist --wheel
           sha256sum dist/* > dist/SHA256SUMS
+      - name: Verify source contracts
+        run: |
+          python -m pip install -e .
+          python -m unittest discover -s tests -v
+          python scripts/check_compatibility.py --manifest conformance/compatibility-v1.json
       - name: Verify wheel consumer
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          python -m venv .release-wheel
-          .release-wheel/bin/python -m pip install dist/*.whl
-          .release-wheel/bin/agent-proof --version
-          .release-wheel/bin/agent-proof --help
-          .release-wheel/bin/python demos/demo.py
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/agent-proof-release-wheel"
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -m pip install --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          unset PYTHONPATH
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -c 'from pathlib import Path; import os, sys, agent_proof; from importlib.metadata import version; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; assert agent_proof.__version__ == version("agent_proof") == os.environ["RELEASE_TAG"][1:]; print(source, agent_proof.__version__)'
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/agent-proof" --version
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/agent-proof" --help
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" "$GITHUB_WORKSPACE/demos/demo.py" > agent-proof-release-wheel-demo.json
+          "$RUNNER_TEMP/agent-proof-release-wheel/bin/python" -c 'import json; from pathlib import Path; result = json.loads(Path("agent-proof-release-wheel-demo.json").read_text()); required = ("ok", "verified", "tamper_refused", "bundle_verified", "bundle_tamper_refused", "graph_verified", "graph_tamper_refused", "bundle_graph_verified", "interop_verified"); assert all(result.get(key) is True for key in required), result; assert result.get("interop_source_state") == "verified", result; print(json.dumps(result, sort_keys=True))'
       - name: Verify source consumer
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          python -m venv .release-sdist
-          .release-sdist/bin/python -m pip install dist/*.tar.gz
-          .release-sdist/bin/agent-proof --version
-          .release-sdist/bin/agent-proof --help
-          .release-sdist/bin/python demos/demo.py
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/agent-proof-release-sdist"
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -m pip install --no-deps dist/*.tar.gz
+          cd "$RUNNER_TEMP"
+          unset PYTHONPATH
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -c 'from pathlib import Path; import os, sys, agent_proof; from importlib.metadata import version; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; assert agent_proof.__version__ == version("agent_proof") == os.environ["RELEASE_TAG"][1:]; print(source, agent_proof.__version__)'
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/agent-proof" --version
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/agent-proof" --help
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" "$GITHUB_WORKSPACE/demos/demo.py" > agent-proof-release-sdist-demo.json
+          "$RUNNER_TEMP/agent-proof-release-sdist/bin/python" -c 'import json; from pathlib import Path; result = json.loads(Path("agent-proof-release-sdist-demo.json").read_text()); required = ("ok", "verified", "tamper_refused", "bundle_verified", "bundle_tamper_refused", "graph_verified", "graph_tamper_refused", "bundle_graph_verified", "interop_verified"); assert all(result.get(key) is True for key in required), result; assert result.get("interop_source_state") == "verified", result; print(json.dumps(result, sort_keys=True))'
       - name: Publish prerelease assets
         env:
           GH_TOKEN: ${{ github.token }}

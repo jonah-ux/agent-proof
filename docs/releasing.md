@@ -20,6 +20,11 @@ independently proven until a fresh consumer can run `agent-proof verify-bundle -
 against a bundle whose original artifact root is absent, receive `graph_state: "verified"`, and
 perform source-bound `agent-proof verify-graph` and `agent-proof verify-interop` readbacks.
 
+The publication workflow runs the source suite and compatibility charter check. Each installed
+consumer then runs the native adapter regression corpus from outside the checkout, reads back its
+package location and version, and asserts the demo's bundle, graph, interoperability, and tamper
+results. A successful demo process without those fields is insufficient for publication.
+
 ## Installed consumer gate
 
 The CI workflow also installs the built wheel and source archive into separate fresh environments and runs the installed `agent-proof` entry point. The local equivalent is:

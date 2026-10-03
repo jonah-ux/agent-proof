@@ -18,10 +18,10 @@ result happened. `observed`, `partial`, and `unknowns` remain explicit in every 
 
 ## Try the complete workflow
 
-This route checks out the published `v0.3.1` prerelease so the bundled demo is present.
+This route checks out the `v0.4.0` prerelease so the bundled demo and native adapters are present.
 
 ```console
-git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+git clone --branch v0.4.0 --depth 1 https://github.com/jonah-ux/agent-proof.git
 cd agent-proof
 python3 -m venv .venv
 . .venv/bin/activate

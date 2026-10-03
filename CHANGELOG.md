@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 - 2026-10-03
+
+- Add native Sandbox v2, Trace inspect/query, MCP Doctor, and Worktree Conservator adapters,
+  with bounded counters, signed Sandbox signal exits, and validated declared digests.
+- Bind interop projections and source verification to one captured byte buffer.
+- Include the compatibility charter and producer-derived native fixtures in source archives;
+  exercise native adapters against installed wheel and source consumers.
+- Publish the existing Forgeyard shared-evidence adapter and Agent Systems Lab conformance
+  corpus alongside the native adapter release.
+- Require source tests, installed native adapter checks, matching package/version readback,
+  and asserted bundle/graph/interop demo results before automated publication.
+
 ## Unreleased — Forgeyard shared evidence consumer
 
 - Add a native `ai-work-evidence/v1` interop adapter and pinned seven-case consumer corpus.
