@@ -156,7 +156,7 @@ class ProvenanceGraphTests(unittest.TestCase):
     def test_standalone_record_node_sequence_remains_required(self):
         record = build_record(self._spec(), artifact_root=self.root)
         graph = graph_document(record, artifact_root=self.root)
-        for sequence in (None, 0, "1"):
+        for sequence in (None, 0, "1", True):
             with self.subTest(sequence=sequence):
                 malformed = copy.deepcopy(graph)
                 node = next(node for node in malformed["nodes"] if node["id"].startswith("record:"))
@@ -168,6 +168,14 @@ class ProvenanceGraphTests(unittest.TestCase):
                 result = verify_graph(malformed)
                 self.assertIs(result["ok"], False, result)
                 self.assertTrue(any("record sequence is invalid" in error for error in result["errors"]), result)
+
+        malformed_edge = copy.deepcopy(graph)
+        edge = next(edge for edge in malformed_edge["edges"] if edge["kind"] == "contains")
+        edge["sequence"] = True
+        malformed_edge["graph_sha256"] = digest_json({key: value for key, value in malformed_edge.items() if key != "graph_sha256"})
+        result = verify_graph(malformed_edge)
+        self.assertIs(result["ok"], False, result)
+        self.assertTrue(any("sequence is invalid" in error for error in result["errors"]), result)
 
     def test_require_gates_and_unsupported_inputs_refuse(self):
         with self.assertRaises(ProofError):
