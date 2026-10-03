@@ -15,6 +15,35 @@ class ForgeyardConformanceTests(unittest.TestCase):
         self.corpus = json.loads(CORPUS.read_text(encoding="utf-8"))
         self.assertEqual(self.corpus["contract"], "ai-work-evidence/v1")
 
+    def test_upstream_manifest_pin_matches_current_forgeyard_owner(self):
+        self.assertEqual(
+            self.corpus["upstream"],
+            "https://github.com/jonah-ux/forgeyard/blob/d6feb5b0ec0f7ccb4fb7f56939e8513972b0855d/conformance/manifest.json",
+        )
+        self.assertEqual(
+            self.corpus["upstream_commit"],
+            "d6feb5b0ec0f7ccb4fb7f56939e8513972b0855d",
+        )
+        self.assertEqual(
+            self.corpus["upstream_manifest_sha256"],
+            "6fe5fc6c5993f161111110971927b07e7db4b7d9f01eac352afd173ce31e7924",
+        )
+
+    def test_fixture_cases_match_the_owner_manifest_shape(self):
+        expected = {
+            "valid-observed": (True, "observed"),
+            "status-unknown": (True, "unknown"),
+            "status-failed": (True, "failed"),
+            "unknown-version": (False, None),
+            "unsafe-artifact": (False, None),
+            "bad-hash": (False, None),
+            "malformed": (False, None),
+        }
+        self.assertEqual(
+            {case["name"]: (case["valid"], case.get("status")) for case in self.corpus["cases"]},
+            expected,
+        )
+
     def test_public_cases_are_consumed_with_status_preserved(self):
         expected = {
             "observed": (True, True, "success"),

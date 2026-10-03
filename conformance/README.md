@@ -10,7 +10,12 @@ normalization proves an integrity-bound projection, not deployment or a user-vis
 
 The Forgeyard consumer corpus in [`forgeyard-ai-work-evidence-v1.json`](forgeyard-ai-work-evidence-v1.json)
 pins the public `ai-work-evidence/v1` cases at Forgeyard commit
-[`157ccbabc4c622848de2a1c0547bbc6ad5863a69`](https://github.com/jonah-ux/forgeyard/tree/157ccbabc4c622848de2a1c0547bbc6ad5863a69).
+[`d6feb5b0ec0f7ccb4fb7f56939e8513972b0855d`](https://github.com/jonah-ux/forgeyard/tree/d6feb5b0ec0f7ccb4fb7f56939e8513972b0855d).
+The pinned `conformance/manifest.json` has SHA-256
+`6fe5fc6c5993f161111110971927b07e7db4b7d9f01eac352afd173ce31e7924`.
+Tests assert the commit, manifest digest, and complete seven-case shape before exercising
+source-bound normalization and verification. Refresh this pin when Forgeyard changes its
+owner manifest; the native policy and sandbox schemas remain owned by their respective projects.
 Agent Proof consumes the contract through its native interop adapter, preserving `observed`,
 `verified`, `failed`, and `unknown` status values while refusing unsupported versions, unsafe
 artifact names, malformed hashes, and malformed documents.
