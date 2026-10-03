@@ -19,3 +19,10 @@ owner manifest; the native policy and sandbox schemas remain owned by their resp
 Agent Proof consumes the contract through its native interop adapter, preserving `observed`,
 `verified`, `failed`, and `unknown` status values while refusing unsupported versions, unsafe
 artifact names, malformed hashes, and malformed documents.
+
+The Sourcemark adapter fixture in [`sourcemark-check-v1.json`](sourcemark-check-v1.json) pins the
+public `sourcemark/check/v1` source implementation and keeps the projection bounded to six counts
+and two `sha256:` identities. `ok` is the only state that maps to a successful outcome; `observed`,
+`partial`, and `timed_out` remain explicitly uncertain. Paths, quotes, transcript text, URLs, and
+ledger values never cross this boundary. The pinned source artifact is a temporary source-level
+owner reference until Sourcemark publishes its own Agent Systems Lab conformance manifest.

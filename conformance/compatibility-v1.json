@@ -228,6 +228,18 @@
       }
     },
     {
+      "owner": "sourcemark",
+      "repository": "https://github.com/jonah-ux/sourcemark",
+      "native_schemas": [
+        "sourcemark/check/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/sourcemark/blob/a62c2a777e8a62068f337f3df6899f88c94bbec7/src/sourcemark/check_export.py",
+        "revision": "a62c2a777e8a62068f337f3df6899f88c94bbec7",
+        "sha256": "895a94e1858cab912b2e63edd49a808639d5ef01b3b81433f311042d453d042d"
+      }
+    },
+    {
       "owner": "worktree-conservator",
       "repository": "https://github.com/jonah-ux/worktree-conservator",
       "native_schemas": [
@@ -445,6 +457,24 @@
       "digests": [
         "fingerprint"
       ]
+    },
+    {
+      "schema": "sourcemark/check/v1",
+      "kind": "citation-check",
+      "identity": [],
+      "metrics": [
+        "total",
+        "passing",
+        "failing",
+        "unknown",
+        "observations",
+        "timed_out"
+      ],
+      "digests": [
+        "policy_sha256",
+        "session_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
     },
     {
       "schema": "worktree-conservator.result/v1",
