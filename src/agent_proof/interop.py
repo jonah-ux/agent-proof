@@ -9,7 +9,9 @@ field-presence information, and content digests cross the boundary.
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
+import re
 from typing import Any
 
 from .ledger import (
@@ -25,6 +27,13 @@ from .ledger import (
 
 INTEROP_SCHEMA = "agent-proof/interop/v1"
 INTEROP_VERIFY_SCHEMA = "agent-proof/interop-verify/v1"
+FORGEYARD_EVIDENCE_SCHEMA = "ai-work-evidence/v1"
+
+_FORGEYARD_STATUSES = frozenset({"observed", "verified", "failed", "unknown"})
+_FORGEYARD_SOURCES = frozenset({"atlas", "chatlens", "forgeyard"})
+_FORGEYARD_EVIDENCE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_FORGEYARD_ARTIFACT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
+_FORGEYARD_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 # The registry is deliberately explicit.  A generic JSON file is not evidence
 # from a known sibling until its schema has a reviewed adapter here.
@@ -64,6 +73,11 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "identity": ("person_id", "project_id"),
         "metrics": ("citation_count",),
     },
+    FORGEYARD_EVIDENCE_SCHEMA: {
+        "kind": "shared-evidence",
+        "identity": ("evidence_id", "source"),
+        "metrics": (),
+    },
     "agent-proof/v1": {
         "kind": "legacy-proof",
         "identity": ("run_id",),
@@ -92,6 +106,83 @@ ADAPTERS: dict[str, dict[str, Any]] = {
 }
 
 _STATUS_FIELDS = ("ok", "observed", "partial", "timed_out")
+
+
+def _validate_forgeyard_evidence(payload: dict[str, Any]) -> None:
+    """Validate the public Forgeyard handoff before redaction.
+
+    Forgeyard remains the reference validator for this contract.  Agent Proof
+    repeats the small boundary shape here so an untrusted source cannot enter
+    the native interop projection with an unsupported version, unsafe path, or
+    malformed digest.
+    """
+
+    allowed = {
+        "schema", "evidence_id", "source", "source_version", "created_at",
+        "subject", "summary", "artifacts", "provenance", "status",
+    }
+    unknown = set(payload) - allowed
+    if unknown:
+        raise ProofError(f"Forgeyard evidence contains unknown fields: {sorted(unknown)}")
+    required = allowed - {"artifacts", "provenance"}
+    missing = sorted(field for field in required if field not in payload)
+    if missing:
+        raise ProofError(f"Forgeyard evidence is missing required fields: {', '.join(missing)}")
+    if payload.get("schema") != FORGEYARD_EVIDENCE_SCHEMA:
+        raise ProofError("unsupported Forgeyard evidence schema")
+    evidence_id = payload.get("evidence_id")
+    if not isinstance(evidence_id, str) or not _FORGEYARD_EVIDENCE_ID.fullmatch(evidence_id):
+        raise ProofError("Forgeyard evidence_id has an invalid format")
+    if payload.get("source") not in _FORGEYARD_SOURCES:
+        raise ProofError("Forgeyard evidence source is not supported")
+    for field in ("source_version", "subject", "summary"):
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip() or len(value) > 2048:
+            raise ProofError(f"Forgeyard evidence {field} must be a bounded non-empty string")
+    created_at = payload.get("created_at")
+    if not isinstance(created_at, str) or not created_at.endswith("Z"):
+        raise ProofError("Forgeyard evidence created_at must be an RFC 3339 UTC timestamp")
+    try:
+        datetime.fromisoformat(created_at[:-1] + "+00:00")
+    except ValueError as exc:
+        raise ProofError("Forgeyard evidence created_at must be an RFC 3339 UTC timestamp") from exc
+    if payload.get("status") not in _FORGEYARD_STATUSES:
+        raise ProofError("Forgeyard evidence status is invalid")
+    artifacts = payload.get("artifacts", [])
+    if not isinstance(artifacts, list):
+        raise ProofError("Forgeyard evidence artifacts must be a list")
+    seen: set[str] = set()
+    for artifact in artifacts:
+        if not isinstance(artifact, dict) or set(artifact) != {"name", "size", "sha256"}:
+            raise ProofError("Forgeyard artifact must contain only name, size, and sha256")
+        name = artifact.get("name")
+        if (
+            not isinstance(name, str)
+            or not _FORGEYARD_ARTIFACT_NAME.fullmatch(name)
+            or ".." in name
+            or name.startswith("/")
+            or "\\" in name
+        ):
+            raise ProofError("Forgeyard artifact name must be repository-relative")
+        if name in seen:
+            raise ProofError(f"duplicate Forgeyard artifact name: {name}")
+        seen.add(name)
+        size = artifact.get("size")
+        if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+            raise ProofError("Forgeyard artifact size must be a non-negative integer")
+        digest = artifact.get("sha256")
+        if not isinstance(digest, str) or not _FORGEYARD_SHA256.fullmatch(digest):
+            raise ProofError("Forgeyard artifact sha256 must be lowercase hexadecimal")
+    provenance = payload.get("provenance", {})
+    if not isinstance(provenance, dict):
+        raise ProofError("Forgeyard evidence provenance must be an object")
+    for key, value in provenance.items():
+        if not isinstance(key, str) or not isinstance(value, (str, int, bool, type(None))):
+            raise ProofError("Forgeyard provenance values must be scalar")
+        if key.endswith("_sha256") and (not isinstance(value, str) or not _FORGEYARD_SHA256.fullmatch(value)):
+            raise ProofError(f"Forgeyard provenance hash is invalid: {key}")
+
+
 def _source_relative(path: Path, root: Path) -> str:
     candidate = path.expanduser()
     if not candidate.is_absolute():
@@ -142,6 +233,44 @@ def _identity(payload: dict[str, Any], fields: tuple[str, ...], unknowns: list[s
 
 def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Project allowlisted, non-secret values while recording omissions."""
+
+    if adapter["kind"] == "shared-evidence":
+        _validate_forgeyard_evidence(payload)
+        shared_status = payload["status"]
+        status_to_ok: dict[str, bool | None] = {
+            "observed": True,
+            "verified": True,
+            "failed": False,
+            "unknown": None,
+        }
+        status_to_outcome: dict[str, str | None] = {
+            "observed": "success",
+            "verified": "success",
+            "failed": "failure",
+            "unknown": None,
+        }
+        artifacts = [
+            {"name": item["name"], "size": item["size"], "sha256": item["sha256"]}
+            for item in payload.get("artifacts", [])
+        ]
+        unknowns = ["outcome_unknown"] if shared_status == "unknown" else []
+        return {
+            "status": {
+                "shared": shared_status,
+                "ok": status_to_ok[shared_status],
+                "observed": shared_status != "unknown",
+                "partial": None,
+                "timed_out": None,
+                "outcome": status_to_outcome[shared_status],
+                "exit_code": None,
+            },
+            "identity": _identity(payload, adapter["identity"], unknowns),
+            "metrics": {},
+            "artifacts": artifacts,
+            "declared_fields": [
+                "artifacts", "evidence_id", "source", "status",
+            ],
+        }, _unique(unknowns)
 
     unknowns: list[str] = []
     status = {field: _state(payload, field, unknowns) for field in _STATUS_FIELDS}
@@ -285,6 +414,7 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
     if not isinstance(projection, dict):
         errors.append("projection must be an object")
     else:
+        source_schema = source.get("schema") if isinstance(source, dict) else None
         status = projection.get("status")
         if not isinstance(status, dict):
             errors.append("projection.status must be an object")
@@ -302,6 +432,28 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
                 errors.append("projection.status.outcome disagrees with ok")
             if status.get("exit_code") is not None and (not isinstance(status.get("exit_code"), int) or isinstance(status.get("exit_code"), bool) or status.get("exit_code") < 0):
                 errors.append("projection.status.exit_code is invalid")
+            if source_schema == FORGEYARD_EVIDENCE_SCHEMA:
+                shared = status.get("shared")
+                expected_ok = {
+                    "observed": True,
+                    "verified": True,
+                    "failed": False,
+                    "unknown": None,
+                }
+                expected_outcome = {
+                    "observed": "success",
+                    "verified": "success",
+                    "failed": "failure",
+                    "unknown": None,
+                }
+                if shared not in _FORGEYARD_STATUSES:
+                    errors.append("projection.status.shared is invalid")
+                elif status.get("ok") != expected_ok[shared] or status.get("outcome") != expected_outcome[shared]:
+                    errors.append("projection.status does not preserve Forgeyard status")
+                if not isinstance(status.get("observed"), bool):
+                    errors.append("projection.status.observed must be boolean")
+                if status.get("partial") is not None or status.get("timed_out") is not None or status.get("exit_code") is not None:
+                    errors.append("Forgeyard projection status cannot invent execution fields")
         identity = projection.get("identity")
         if not isinstance(identity, dict) or any(not isinstance(key, str) or not key.endswith("_sha256") or not isinstance(value, str) or not _HEX64.fullmatch(value) for key, value in (identity.items() if isinstance(identity, dict) else [])):
             errors.append("projection.identity is malformed")
@@ -322,8 +474,37 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
         if isinstance(source, dict) and isinstance(source.get("schema"), str) and isinstance(fields, list):
             adapter = ADAPTERS.get(source["schema"], {})
             allowed_fields = set(_STATUS_FIELDS) | {"exit_code"} | set(adapter.get("identity", ())) | set(adapter.get("metrics", ()))
+            if source["schema"] == FORGEYARD_EVIDENCE_SCHEMA:
+                allowed_fields |= {"artifacts", "status"}
             if set(fields) - allowed_fields:
                 errors.append("projection.declared_fields contains an unsupported field")
+        if source_schema == FORGEYARD_EVIDENCE_SCHEMA:
+            artifacts = projection.get("artifacts")
+            if not isinstance(artifacts, list):
+                errors.append("projection.artifacts must be a list")
+            else:
+                seen: set[str] = set()
+                for artifact in artifacts:
+                    if not isinstance(artifact, dict) or set(artifact) != {"name", "size", "sha256"}:
+                        errors.append("projection.artifact is malformed")
+                        continue
+                    name = artifact.get("name")
+                    if (
+                        not isinstance(name, str)
+                        or not _FORGEYARD_ARTIFACT_NAME.fullmatch(name)
+                        or ".." in name
+                        or name.startswith("/")
+                        or "\\" in name
+                    ):
+                        errors.append("projection.artifact name is unsafe")
+                    elif name in seen:
+                        errors.append("projection.artifacts contains a duplicate name")
+                    seen.add(name)
+                    size = artifact.get("size")
+                    if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+                        errors.append("projection.artifact size is invalid")
+                    if not isinstance(artifact.get("sha256"), str) or not _FORGEYARD_SHA256.fullmatch(artifact.get("sha256", "")):
+                        errors.append("projection.artifact sha256 is malformed")
     unknowns = document.get("unknowns")
     if not isinstance(unknowns, list) or unknowns != sorted(set(unknowns)) or any(not isinstance(item, str) or not item for item in unknowns):
         errors.append("unknowns must be sorted unique strings")

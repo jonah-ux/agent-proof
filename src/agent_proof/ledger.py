@@ -38,6 +38,7 @@ COLLECTABLE_SCHEMAS = {
     "context-pack/v1": "context pack",
     "agent-resume/v1": "continuation record",
     "context-integrity/v1": "context integrity admission",
+    "ai-work-evidence/v1": "Forgeyard shared evidence",
     "agent-proof/v1": "legacy proof envelope",
     RECORD_SCHEMA: "proof record",
     LEDGER_SCHEMA: "proof ledger",

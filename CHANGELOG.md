@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Forgeyard shared evidence consumer
+
+- Add a native `ai-work-evidence/v1` interop adapter and pinned seven-case consumer corpus.
+- Preserve shared evidence status and unknown semantics while refusing malformed or unsafe input.
+
 ## Unreleased — Agent Systems Lab conformance corpus
 
 - Add a synthetic adapter inventory and conformance tests for policy, sandbox, evaluation, trace,

@@ -10,5 +10,12 @@
     {"schema": "agent-resume/v1", "kind": "resume", "identity": ["run_id", "resume_id", "checkpoint_id"]},
     {"schema": "context-integrity/v1", "kind": "context-integrity", "identity": ["person_id", "project_id"]}
   ],
+  "consumer_contracts": [
+    {
+      "schema": "ai-work-evidence/v1",
+      "owner": "forgeyard",
+      "corpus": "forgeyard-ai-work-evidence-v1.json"
+    }
+  ],
   "negative_cases": ["unknown-schema", "symlink-source", "tampered-source", "tampered-projection"]
 }
