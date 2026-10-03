@@ -30,7 +30,7 @@ class CompatibilityManifestTests(unittest.TestCase):
     def test_public_manifest_is_valid_and_digest_is_stable(self):
         payload = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         self.assertEqual(payload["schema"], COMPATIBILITY_SCHEMA)
-        self.assertEqual(len(payload["adapters"]), 18)
+        self.assertEqual(len(payload["adapters"]), 19)
         self.assertEqual(validate_manifest(payload), [])
         report = check_manifest(MANIFEST_PATH)
         self.assertTrue(report["ok"])

@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_proof.interop import normalize_envelope, normalize_payload, verify_interop
+from agent_proof.ledger import ProofError
 from agent_proof.ledger import digest_bytes, digest_json
 
 
@@ -206,6 +207,96 @@ class NativeAdapterTests(unittest.TestCase):
         self.assertNotIn("/private/root", encoded)
         self.assertNotIn(json.dumps(["printf", "synthetic"]), encoded)
         self.assertTrue(verify_interop(normalized, artifact_root=self.root, require_input=True)["ok"])
+
+    def test_sourcemark_check_projection_preserves_bounded_counts_and_hashes(self):
+        source = self._write(
+            "sourcemark.json",
+            {
+                "schema": "sourcemark/check/v1",
+                "state": "partial",
+                "counts": {
+                    "total": 2,
+                    "passing": 1,
+                    "failing": 1,
+                    "unknown": 1,
+                    "observations": 3,
+                    "timed_out": 0,
+                },
+                "policy_sha256": "sha256:" + "a" * 64,
+                "session_sha256": "sha256:" + "b" * 64,
+            },
+        )
+        normalized = normalize_envelope(source, artifact_root=self.root)
+        self.assertEqual(normalized["adapter"]["kind"], "citation-check")
+        self.assertEqual(normalized["projection"]["metrics"]["failing"], 1)
+        self.assertEqual(
+            normalized["projection"]["digests"],
+            {"policy_sha256": "sha256:" + "a" * 64, "session_sha256": "sha256:" + "b" * 64},
+        )
+        self.assertIsNone(normalized["projection"]["status"]["ok"])
+        self.assertIs(normalized["projection"]["status"]["partial"], True)
+        self.assertIn("outcome_unknown", normalized["unknowns"])
+        encoded = json.dumps(normalized, sort_keys=True)
+        self.assertNotIn("private transcript", encoded)
+        self.assertTrue(verify_interop(normalized, artifact_root=self.root, require_input=True)["ok"])
+
+    def test_sourcemark_check_states_do_not_infer_outcomes(self):
+        cases = {
+            "ok": (1, 1, 0, 0, 0, True, True, False, False),
+            "observed": (0, 0, 0, 0, 0, None, True, False, False),
+            "partial": (1, 0, 1, 1, 0, None, True, True, False),
+            "timed_out": (1, 0, 1, 0, 1, None, False, False, True),
+        }
+        for state, (total, passing, failing, unknown, timed_out, ok, observed, partial, timeout_flag) in cases.items():
+            with self.subTest(state=state):
+                source = self._write(
+                    "sourcemark-state.json",
+                    {
+                        "schema": "sourcemark/check/v1",
+                        "state": state,
+                        "counts": {
+                            "total": total,
+                            "passing": passing,
+                            "failing": failing,
+                            "unknown": unknown,
+                            "observations": 1,
+                            "timed_out": timed_out,
+                        },
+                        "policy_sha256": "sha256:" + "c" * 64,
+                        "session_sha256": "sha256:" + "d" * 64,
+                    },
+                )
+                normalized = normalize_envelope(source, artifact_root=self.root)
+                status = normalized["projection"]["status"]
+                self.assertIs(status["ok"], ok)
+                self.assertIs(status["observed"], observed)
+                self.assertIs(status["partial"], partial)
+                self.assertIs(status["timed_out"], timeout_flag)
+                if state == "ok":
+                    self.assertEqual(status["outcome"], "success")
+                else:
+                    self.assertIsNone(status["outcome"])
+
+    def test_sourcemark_check_malformed_exports_fail_closed(self):
+        payload = {
+            "schema": "sourcemark/check/v1",
+            "state": "ok",
+            "counts": {"total": 1, "passing": 1, "failing": 0, "unknown": 0, "observations": 1, "timed_out": 0},
+            "policy_sha256": "sha256:" + "e" * 64,
+            "session_sha256": "sha256:" + "f" * 64,
+        }
+        for mutation in ("state", "counts", "policy_sha256"):
+            with self.subTest(mutation=mutation):
+                changed = dict(payload)
+                if mutation == "state":
+                    changed["state"] = "unsupported"
+                elif mutation == "counts":
+                    changed["counts"] = {**payload["counts"], "passing": 2}
+                else:
+                    changed["policy_sha256"] = "private"
+                source = self._write("bad-sourcemark.json", changed)
+                with self.assertRaises(ProofError):
+                    normalize_envelope(source, artifact_root=self.root)
 
     def test_trace_inspect_and_query_keep_integrity_metadata_bounded(self):
         inspect = self._write(

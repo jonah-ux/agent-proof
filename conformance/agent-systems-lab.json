@@ -8,7 +8,8 @@
     {"schema": "agent-trace/v1", "kind": "trace", "identity": ["run_id", "trace_id"]},
     {"schema": "context-pack/v1", "kind": "context", "identity": ["run_id", "pack_id"]},
     {"schema": "agent-resume/v1", "kind": "resume", "identity": ["run_id", "resume_id", "checkpoint_id"]},
-    {"schema": "context-integrity/v1", "kind": "context-integrity", "identity": ["person_id", "project_id"]}
+    {"schema": "context-integrity/v1", "kind": "context-integrity", "identity": ["person_id", "project_id"]},
+    {"schema": "sourcemark/check/v1", "kind": "citation-check", "identity": [], "metrics": ["total", "passing", "failing", "unknown", "observations", "timed_out"], "digests": ["policy_sha256", "session_sha256"]}
   ],
   "consumer_contracts": [
     {

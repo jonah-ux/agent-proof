@@ -8,6 +8,21 @@ from agent_proof.ledger import ProofError
 
 
 def source_payload(schema: str, index: int) -> dict:
+    if schema == "sourcemark/check/v1":
+        return {
+            "schema": schema,
+            "state": "ok",
+            "counts": {
+                "total": 1,
+                "passing": 1,
+                "failing": 0,
+                "unknown": 0,
+                "observations": 1,
+                "timed_out": 0,
+            },
+            "policy_sha256": "sha256:" + "a" * 64,
+            "session_sha256": "sha256:" + "b" * 64,
+        }
     payload = {
         "schema": schema,
         "run_id": f"synthetic-run-{index}",
@@ -36,7 +51,7 @@ class AgentSystemsLabConformanceTests(unittest.TestCase):
         manifest = json.loads((Path(__file__).parents[1] / "conformance" / "agent-systems-lab.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schema"], "agent-proof-lab-conformance/v1")
         self.assertEqual({item["schema"] for item in manifest["adapters"]}, {
-            "agent-policy/v1", "agent-sandbox/v1", "agent-eval/v1", "agent-trace/v1", "context-pack/v1", "agent-resume/v1", "context-integrity/v1"
+            "agent-policy/v1", "agent-sandbox/v1", "agent-eval/v1", "agent-trace/v1", "context-pack/v1", "agent-resume/v1", "context-integrity/v1", "sourcemark/check/v1"
         })
 
     def test_every_manifest_adapter_normalizes_without_leaking_private_values(self):

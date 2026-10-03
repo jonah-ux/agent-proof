@@ -29,6 +29,7 @@ from .ledger import (
 INTEROP_SCHEMA = "agent-proof/interop/v1"
 INTEROP_VERIFY_SCHEMA = "agent-proof/interop-verify/v1"
 FORGEYARD_EVIDENCE_SCHEMA = "ai-work-evidence/v1"
+SOURCEMARK_CHECK_SCHEMA = "sourcemark/check/v1"
 
 # Native counters must round-trip through interoperable JSON integer readers.
 # Legacy adapter ranges remain unchanged.
@@ -39,6 +40,8 @@ _FORGEYARD_SOURCES = frozenset({"atlas", "chatlens", "forgeyard"})
 _FORGEYARD_EVIDENCE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _FORGEYARD_ARTIFACT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
 _FORGEYARD_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SOURCEMARK_HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
+_SOURCEMARK_STATES = frozenset({"ok", "observed", "partial", "timed_out"})
 
 # The registry is deliberately explicit.  A generic JSON file is not evidence
 # from a known sibling until its schema has a reviewed adapter here.
@@ -116,6 +119,13 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "kind": "shared-evidence",
         "identity": ("evidence_id", "source"),
         "metrics": (),
+    },
+    SOURCEMARK_CHECK_SCHEMA: {
+        "kind": "citation-check",
+        "identity": (),
+        "metrics": ("total", "passing", "failing", "unknown", "observations", "timed_out"),
+        "digests": ("policy_sha256", "session_sha256"),
+        "max_integer": MAX_NATIVE_INTEGER,
     },
     "agent-proof/v1": {
         "kind": "legacy-proof",
@@ -296,6 +306,43 @@ def _digests(payload: dict[str, Any], fields: tuple[str, ...], unknowns: list[st
     return result
 
 
+def _validate_sourcemark_check(payload: dict[str, Any]) -> None:
+    """Validate Sourcemark's bounded check export before projection."""
+
+    allowed = {"schema", "state", "counts", "policy_sha256", "session_sha256"}
+    if set(payload) != allowed:
+        raise ProofError("Sourcemark check export has an unsupported field set")
+    if payload.get("schema") != SOURCEMARK_CHECK_SCHEMA:
+        raise ProofError("unsupported Sourcemark check schema")
+    state = payload.get("state")
+    if state not in _SOURCEMARK_STATES:
+        raise ProofError("Sourcemark check export has an unsupported state")
+    counts = payload.get("counts")
+    expected_counts = {"total", "passing", "failing", "unknown", "observations", "timed_out"}
+    if not isinstance(counts, dict) or set(counts) != expected_counts:
+        raise ProofError("Sourcemark check export has an invalid count set")
+    for value in counts.values():
+        if not _valid_integer(value, MAX_NATIVE_INTEGER):
+            raise ProofError("Sourcemark check export counts must be bounded non-negative integers")
+    if counts["timed_out"] not in (0, 1):
+        raise ProofError("Sourcemark check export timeout count is invalid")
+    if counts["passing"] + counts["failing"] != counts["total"]:
+        raise ProofError("Sourcemark check export counts do not reconcile")
+    if counts["unknown"] > counts["failing"]:
+        raise ProofError("Sourcemark check export unknown count exceeds failing count")
+    state_valid = {
+        "ok": counts["total"] > 0 and counts["failing"] == 0 and counts["timed_out"] == 0,
+        "observed": counts["total"] == 0 and counts["timed_out"] == 0,
+        "partial": counts["total"] > 0 and counts["failing"] > 0 and counts["timed_out"] == 0,
+        "timed_out": counts["timed_out"] == 1,
+    }
+    if not state_valid[state]:
+        raise ProofError("Sourcemark check export state does not match counts")
+    for field in ("policy_sha256", "session_sha256"):
+        if not isinstance(payload.get(field), str) or not _SOURCEMARK_HASH.fullmatch(payload[field]):
+            raise ProofError("Sourcemark check export identity is malformed")
+
+
 def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Project allowlisted, non-secret values while recording omissions."""
 
@@ -335,6 +382,24 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
             "declared_fields": [
                 "artifacts", "evidence_id", "source", "status",
             ],
+        }, _unique(unknowns)
+
+    if adapter["kind"] == "citation-check":
+        _validate_sourcemark_check(payload)
+        state = payload["state"]
+        status_by_state = {
+            "ok": {"ok": True, "observed": True, "partial": False, "timed_out": False, "outcome": "success", "exit_code": None},
+            "observed": {"ok": None, "observed": True, "partial": False, "timed_out": False, "outcome": None, "exit_code": None},
+            "partial": {"ok": None, "observed": True, "partial": True, "timed_out": False, "outcome": None, "exit_code": None},
+            "timed_out": {"ok": None, "observed": False, "partial": False, "timed_out": True, "outcome": None, "exit_code": None},
+        }
+        unknowns = [] if state == "ok" else ["outcome_unknown"]
+        return {
+            "status": status_by_state[state],
+            "identity": {},
+            "metrics": dict(payload["counts"]),
+            "declared_fields": sorted(set(payload["counts"]) | {"policy_sha256", "session_sha256"}),
+            "digests": {field: payload[field] for field in adapter["digests"]},
         }, _unique(unknowns)
 
     unknowns: list[str] = []
@@ -552,10 +617,11 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
                 errors.append("projection.metrics contains an unsupported field")
         digests = projection.get("digests")
         if digests is not None:
+            digest_pattern = _SOURCEMARK_HASH if source_schema == SOURCEMARK_CHECK_SCHEMA else _HEX64
             if not isinstance(digests, dict) or any(
                 not isinstance(key, str)
                 or not isinstance(value, str)
-                or not _HEX64.fullmatch(value)
+                or not digest_pattern.fullmatch(value)
                 for key, value in (digests.items() if isinstance(digests, dict) else [])
             ):
                 errors.append("projection.digests is malformed")

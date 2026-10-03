@@ -194,12 +194,16 @@ declares it. An unknown schema or malformed input refuses the complete collectio
 ### 6. Normalize a sibling envelope without losing unknowns
 
 The optional interoperability adapter gives policy, sandbox, evaluation, trace, context-pack,
-resume, Context Integrity, Forgeyard shared evidence, and Agent Proof envelopes one loss-aware
+resume, Context Integrity, Sourcemark check exports, Forgeyard shared evidence, and Agent Proof envelopes one loss-aware
 handoff contract. It stores the source byte digest, source schema, adapter kind, hashed identity
 fields, and a small allowlisted projection of status and metrics. Missing fields remain explicit
 unknowns; raw source values never cross the boundary. The Forgeyard `ai-work-evidence/v1` adapter
 also preserves its four source statuses and bounded artifact metadata while refusing unsupported
 versions, unsafe artifact names, malformed hashes, and malformed documents.
+
+Sourcemark's `sourcemark/check/v1` adapter carries only its six bounded counts and two `sha256:`
+identities. `ok` maps to a successful outcome; `observed`, `partial`, and `timed_out` remain
+explicitly uncertain, and the adapter refuses unreconciled counts or malformed identities.
 
 ```console
 agent-proof normalize ./run-files/evaluation.json \
