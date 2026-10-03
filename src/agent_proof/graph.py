@@ -290,7 +290,8 @@ def verify_graph(
             expected_id_prefix = "blob" if kind == "evidence" else "container" if node_id.startswith("container:") else "record"
             if node_id != f"{expected_id_prefix}:{digest}":
                 errors.append(f"nodes[{index}] id does not exactly match its kind and sha256")
-        if kind == "record" and (not isinstance(node.get("sequence"), int) or node.get("sequence", 0) < 1):
+        # A standalone record container has kind "record" but no chain sequence.
+        if node_id.startswith("record:") and (not isinstance(node.get("sequence"), int) or node.get("sequence", 0) < 1):
             errors.append(f"nodes[{index}] record sequence is invalid")
         if kind == "evidence":
             if not isinstance(node.get("roles"), list) or not node["roles"] or any(not isinstance(item, str) for item in node["roles"]):

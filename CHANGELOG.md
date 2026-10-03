@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1 - 2026-10-03
+
+- Correct graph verification for standalone `record/v2` inputs: the record container has
+  no chain sequence, while actual record nodes still require a positive sequence.
+- Cover observed and unobserved standalone graph readback and portable bundle verification
+  after the original artifact root is removed.
+- Run the graph regressions against installed wheel and source consumers in CI and before
+  publication. Existing 0.4.0 tags and assets retain their original bytes.
+
 ## 0.4.0 - 2026-10-03
 
 - Add native Sandbox v2, Trace inspect/query, MCP Doctor, and Worktree Conservator adapters,
