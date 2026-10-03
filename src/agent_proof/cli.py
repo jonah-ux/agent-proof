@@ -87,6 +87,15 @@ def parser() -> argparse.ArgumentParser:
     export.add_argument("path")
     export.add_argument("--out", required=True)
     export.add_argument("--artifact-root")
+    export.add_argument("--require-observed", action="store_true")
+    export.add_argument("--require-artifacts", action="store_true")
+    export.add_argument("--require-graph", action="store_true")
+    export.add_argument(
+        "--max-bytes",
+        type=int,
+        default=None,
+        help="optional uncompressed bundle payload limit; use 67108864 for the verify-bundle default",
+    )
 
     collect = commands.add_parser("collect", help="collect known sibling envelopes into a verified ledger")
     collect.add_argument("--input", action="append", required=True, help="relative or absolute JSON envelope path; repeatable")
@@ -223,7 +232,16 @@ def main(argv: list[str] | None = None) -> int:
             document = load_json(_path(args.path))
             root = _path(args.artifact_root) if args.artifact_root else None
             result = verify_document(document, artifact_root=root)
-            output = export_bundle(document, result, _path(args.out), artifact_root=root)
+            output = export_bundle(
+                document,
+                result,
+                _path(args.out),
+                artifact_root=root,
+                require_observed=args.require_observed,
+                require_artifacts=args.require_artifacts,
+                require_graph=args.require_graph,
+                max_bytes=args.max_bytes,
+            )
             _print(output)
             return 0
 

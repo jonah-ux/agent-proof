@@ -158,6 +158,19 @@ agent-proof render run-proof.json --artifact-root ./run-files --out run-proof.md
 agent-proof export run-proof.json --artifact-root ./run-files --out run-proof.tar.gz
 ```
 
+For a publication gate that matches the portable readback contract, require an observed result,
+verified source/artifact bytes, a provenance graph, and the verifier's 64 MiB uncompressed payload
+budget explicitly:
+
+```console
+agent-proof export run-proof.json --artifact-root ./run-files --out run-proof.tar.gz \
+  --require-observed --require-artifacts --require-graph --max-bytes 67108864
+```
+
+The export flags are additive and opt-in, so existing callers keep their previous behavior when
+they omit them. `--max-bytes` measures the uncompressed payload bytes that the archive carries;
+the default `verify-bundle` readback limit is 64 MiB when its flag is omitted.
+
 The Markdown view is deterministic and includes record hashes, observation state, partial state,
 and unknowns. The tarball contains the proof document, a manifest, a redacted provenance graph,
 and every referenced source or artifact under controlled archive names. Its gzip and tar metadata

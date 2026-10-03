@@ -739,9 +739,31 @@ def _tar_bytes(name: str, payload: bytes) -> tarfile.TarInfo:
     return info
 
 
-def export_bundle(document: dict[str, Any], verification: dict[str, Any], output: Path, *, artifact_root: Path | None = None) -> dict[str, Any]:
+def export_bundle(
+    document: dict[str, Any],
+    verification: dict[str, Any],
+    output: Path,
+    *,
+    artifact_root: Path | None = None,
+    require_observed: bool = False,
+    require_artifacts: bool = False,
+    require_graph: bool = False,
+    max_bytes: int | None = None,
+) -> dict[str, Any]:
     if not verification["ok"]:
         raise ProofError("cannot export invalid evidence: " + "; ".join(verification["errors"]))
+    gated = verification_output(
+        verification,
+        require_observed=require_observed,
+        require_artifacts=require_artifacts,
+    )
+    if not gated["ok"]:
+        raise ProofError("cannot export evidence that does not satisfy publication gates: " + "; ".join(gated["errors"]))
+    if max_bytes is not None and max_bytes <= 0:
+        raise ProofError("max_bytes must be positive when provided")
+    graph_supported = document.get("schema") in {RECORD_SCHEMA, LEDGER_SCHEMA, RUN_SCHEMA}
+    if require_graph and not graph_supported:
+        raise ProofError("provenance graph is unavailable for this evidence schema")
     entries: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for record in document.get("records", [document] if document.get("schema") == RECORD_SCHEMA else []):
@@ -757,7 +779,6 @@ def export_bundle(document: dict[str, Any], verification: dict[str, Any], output
         "input_sha256": digest_json(document),
         "entries": [],
     }
-    output.parent.mkdir(parents=True, exist_ok=True)
     proof_payload = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
     manifest["entries"].append({"archive_path": "proof/document.json", "size": len(proof_payload), "sha256": digest_bytes(proof_payload)})
     graph_payload: bytes | None = None
@@ -776,6 +797,8 @@ def export_bundle(document: dict[str, Any], verification: dict[str, Any], output
         manifest["graph_schema"] = graph["schema"]
         manifest["graph_sha256"] = graph_sha256
         manifest["entries"].append({"archive_path": GRAPH_ARCHIVE_PATH, "size": len(graph_payload), "sha256": digest_bytes(graph_payload)})
+    if require_graph and graph_payload is None:
+        raise ProofError("provenance graph is required for export")
     artifact_payloads: list[tuple[str, bytes]] = []
     for index, item in enumerate(entries, 1):
         target = _rooted_file(artifact_root, item["path"], item["category"])
@@ -784,6 +807,12 @@ def export_bundle(document: dict[str, Any], verification: dict[str, Any], output
         artifact_payloads.append((archive_path, payload))
         manifest["entries"].append({"archive_path": archive_path, "source_path": item["path"], "size": len(payload), "sha256": digest_bytes(payload)})
     manifest_payload = json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
+    projected_bytes = len(manifest_payload) + len(proof_payload) + sum(len(payload) for _path, payload in artifact_payloads)
+    if graph_payload is not None:
+        projected_bytes += len(graph_payload)
+    if max_bytes is not None and projected_bytes > max_bytes:
+        raise ProofError(f"projected bundle payload exceeds max_bytes: {projected_bytes} > {max_bytes}")
+    output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as raw:
         with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0, filename="") as compressed:
             with tarfile.open(fileobj=compressed, mode="w") as archive:
