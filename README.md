@@ -48,6 +48,13 @@ and exercises the reviewed policy, sandbox, evaluation, trace, context-pack, res
 context-integrity adapters. It keeps source values synthetic and verifies that normalization
 preserves only allowlisted signals and digests.
 
+The additive [`agent-systems-lab/compatibility/v1`](conformance/compatibility-v1.json) charter
+indexes the twelve public owners, pins each reviewed conformance artifact to an immutable commit
+and SHA-256, and defines the bounded cross-repository status and refusal vocabulary. Validate the
+charter from a clean checkout with `python scripts/check_compatibility.py`. The checker validates
+the charter's own source identity and structure; it does not fetch or claim to deploy sibling
+repositories.
+
 Example result:
 
 ```json

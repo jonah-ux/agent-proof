@@ -1,0 +1,397 @@
+{
+  "schema": "agent-systems-lab/compatibility/v1",
+  "contract_version": 1,
+  "authority": "agent-proof",
+  "repository": "https://github.com/jonah-ux/agent-proof",
+  "canonicalization": {
+    "allow_nan": false,
+    "encoding": "utf-8",
+    "json": "sorted-keys-compact"
+  },
+  "identifiers": {
+    "max_length": 128,
+    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+  },
+  "statuses": [
+    "blocked",
+    "failed",
+    "observed",
+    "partial",
+    "unknown",
+    "unavailable",
+    "verified"
+  ],
+  "refusal_codes": [
+    {
+      "code": "digest_mismatch",
+      "class": "integrity",
+      "meaning": "The bytes or digest do not match the admitted source."
+    },
+    {
+      "code": "duplicate_identifier",
+      "class": "identity",
+      "meaning": "A manifest contains an identifier more than once."
+    },
+    {
+      "code": "malformed_manifest",
+      "class": "input",
+      "meaning": "The compatibility document does not satisfy its structural contract."
+    },
+    {
+      "code": "redaction_violation",
+      "class": "privacy",
+      "meaning": "A boundary attempts to export a denied raw or private value."
+    },
+    {
+      "code": "source_unbound",
+      "class": "provenance",
+      "meaning": "A projection cannot be traced back to the admitted source bytes."
+    },
+    {
+      "code": "stale_source_identity",
+      "class": "provenance",
+      "meaning": "The source identity no longer matches the recorded revision or digest."
+    },
+    {
+      "code": "unknown_version",
+      "class": "compatibility",
+      "meaning": "The producer or consumer version is outside the supported range."
+    },
+    {
+      "code": "unsafe_path",
+      "class": "filesystem",
+      "meaning": "A path escapes the declared artifact boundary or uses an unsafe link."
+    },
+    {
+      "code": "unsupported_schema",
+      "class": "compatibility",
+      "meaning": "The input schema is not a reviewed native or adapter schema."
+    },
+    {
+      "code": "unsupported_status",
+      "class": "compatibility",
+      "meaning": "A lifecycle status is not in the bounded cross-repository vocabulary."
+    }
+  ],
+  "redaction": {
+    "private_paths": false,
+    "provider_credentials": false,
+    "raw_payloads": false,
+    "secrets": false
+  },
+  "owner_codes": {
+    "fields": ["owner_status", "owner_code"],
+    "mode": "preserve-verbatim",
+    "unknown_policy": "do-not-infer"
+  },
+  "participants": [
+    {
+      "owner": "agent-policy",
+      "repository": "https://github.com/jonah-ux/agent-policy",
+      "native_schemas": [
+        "agent-policy/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/agent-policy/blob/e571aa82269ef5c2266444858c712bc537799945/conformance/agent-systems-lab.json",
+        "revision": "e571aa82269ef5c2266444858c712bc537799945",
+        "sha256": "6456a7d9ece8917ca3e6cb91cee8df256b777e6ee70ae0167b9c804ce766bb6d"
+      }
+    },
+    {
+      "owner": "agent-proof",
+      "repository": "https://github.com/jonah-ux/agent-proof",
+      "native_schemas": [
+        "agent-proof/interop/v1",
+        "agent-proof-lab-conformance/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+        "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930",
+        "sha256": "e702ec462db47205989e05f593b5e1d87679b8293c3d13d409db7babf56ba98e"
+      }
+    },
+    {
+      "owner": "agent-resume",
+      "repository": "https://github.com/jonah-ux/agent-resume",
+      "native_schemas": [
+        "agent-resume/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/agent-resume/blob/e33c0e7c27c8e873035ce0d390ac8889247ed237/conformance/agent-systems-lab.json",
+        "revision": "e33c0e7c27c8e873035ce0d390ac8889247ed237",
+        "sha256": "1490f4e7209cc9ef5e3b46f86d8f0ca58f222612f6a8b712369bf865f674c535"
+      }
+    },
+    {
+      "owner": "agent-sandbox-run",
+      "repository": "https://github.com/jonah-ux/agent-sandbox-run",
+      "native_schemas": [
+        "agent-sandbox/v2"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/agent-sandbox-run/blob/e400a93bd8cb4d488f5d23d0f8aa398c3bc3afd7/conformance/agent-systems-lab.json",
+        "revision": "e400a93bd8cb4d488f5d23d0f8aa398c3bc3afd7",
+        "sha256": "d2481de8ead520091731c3bf54ae4688c917b4bdd08ce895c24d23770768c6ef"
+      }
+    },
+    {
+      "owner": "agent-trace-lite",
+      "repository": "https://github.com/jonah-ux/agent-trace-lite",
+      "native_schemas": [
+        "agent-trace/v1",
+        "agent-trace/inspect/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/agent-trace-lite/blob/2a2b0302899db4f086dfbd277ae11bebe8180d59/conformance/agent-systems-lab.json",
+        "revision": "2a2b0302899db4f086dfbd277ae11bebe8180d59",
+        "sha256": "e949ae734fe3f7b44cd341fe5f1f71b70ec439e37327fd357a0db55888928dd1"
+      }
+    },
+    {
+      "owner": "atlas-agent-runtime",
+      "repository": "https://github.com/jonah-ux/atlas-agent-runtime",
+      "native_schemas": [
+        "atlas-receipt/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/atlas-agent-runtime/blob/6678ded3ccce377d90aabe69647b561acae6b1b1/tests/test_conformance.py",
+        "revision": "6678ded3ccce377d90aabe69647b561acae6b1b1",
+        "sha256": "b490ac782d26d21bbb6b24011ca5bad1b074fa5fc382190e074a0daf21d0cc67"
+      }
+    },
+    {
+      "owner": "chatlens",
+      "repository": "https://github.com/jonah-ux/chatlens",
+      "native_schemas": [
+        "chatlens-trace-envelope/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/chatlens/blob/8dc99a5f526371fdd5b6ca92d516cdde7c9a36f7/tests/test_conformance.py",
+        "revision": "8dc99a5f526371fdd5b6ca92d516cdde7c9a36f7",
+        "sha256": "1560e2bbd4f68f6816141e9aa04316117a2712f7dc70648c5231171bf8bb3d97"
+      }
+    },
+    {
+      "owner": "context-integrity-lab",
+      "repository": "https://github.com/jonah-ux/context-integrity-lab",
+      "native_schemas": [
+        "context-integrity/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/context-integrity-lab/blob/d5a5bc6acf3ae9b6cfa086bb5ceb82282c316a89/conformance/agent-systems-lab.json",
+        "revision": "d5a5bc6acf3ae9b6cfa086bb5ceb82282c316a89",
+        "sha256": "9778feb3f348ede5434e07d18306fe609b8f600c9d588d556db810184a0d57b4"
+      }
+    },
+    {
+      "owner": "forgeyard",
+      "repository": "https://github.com/jonah-ux/forgeyard",
+      "native_schemas": [
+        "ai-work-evidence/v1",
+        "forgeyard-compose/v1",
+        "forgeyard-provenance-packet/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/forgeyard/blob/6f3aa44cf1fdb1cf191d013cc74aa98cc98c7c50/conformance/manifest.json",
+        "revision": "6f3aa44cf1fdb1cf191d013cc74aa98cc98c7c50",
+        "sha256": "6fe5fc6c5993f161111110971927b07e7db4b7d9f01eac352afd173ce31e7924"
+      }
+    },
+    {
+      "owner": "mcp-doctor",
+      "repository": "https://github.com/jonah-ux/mcp-doctor",
+      "native_schemas": [
+        "mcp-doctor/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/mcp-doctor/blob/b88b3d7a3376a0baecb3cc0d65ae888be964820d/conformance/agent-systems-lab.json",
+        "revision": "b88b3d7a3376a0baecb3cc0d65ae888be964820d",
+        "sha256": "e084ba588ebd8700e5412a3e4bda24a41fd89bc75330098ef82200374d43dff7"
+      }
+    },
+    {
+      "owner": "slipstream",
+      "repository": "https://github.com/jonah-ux/slipstream",
+      "native_schemas": [
+        "slipstream/query/v1",
+        "slipstream/inspect/v1",
+        "slipstream/manifest/v1",
+        "slipstream/verify/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/slipstream/blob/1d73de7b031e3f7362360dde056e16ea942fb0eb/conformance/agent-systems-lab.json",
+        "revision": "1d73de7b031e3f7362360dde056e16ea942fb0eb",
+        "sha256": "6000eb52f1d6ad01ddabe2db1db8267f5c160912554f6e79d56193b1b6cfa3ee"
+      }
+    },
+    {
+      "owner": "worktree-conservator",
+      "repository": "https://github.com/jonah-ux/worktree-conservator",
+      "native_schemas": [
+        "worktree-conservator.result/v1"
+      ],
+      "conformance_artifact": {
+        "url": "https://github.com/jonah-ux/worktree-conservator/blob/a7bf581764268286ecb03782e0af4677ad9dd0fb/conformance/agent-systems-lab.json",
+        "revision": "a7bf581764268286ecb03782e0af4677ad9dd0fb",
+        "sha256": "024a2bbfe64f78ce19a3f0841ed2eea85a9780d4bb3cb5297a099d068b6a3b64"
+      }
+    }
+  ],
+  "adapters": [
+    {
+      "schema": "agent-eval/v1",
+      "kind": "evaluation",
+      "identity": [
+        "run_id",
+        "evaluation_id",
+        "candidate_id"
+      ],
+      "metrics": [
+        "duration_ms",
+        "item_count",
+        "trial_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-policy/v1",
+      "kind": "policy",
+      "identity": [
+        "run_id",
+        "policy_id"
+      ],
+      "metrics": [],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-proof/interop/v1",
+      "kind": "normalized-proof",
+      "identity": [
+        "run_id"
+      ],
+      "metrics": [
+        "record_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-proof/ledger/v2",
+      "kind": "proof-ledger",
+      "identity": [
+        "run_id"
+      ],
+      "metrics": [
+        "record_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-proof/record/v2",
+      "kind": "proof-record",
+      "identity": [
+        "run_id"
+      ],
+      "metrics": [
+        "duration_ms"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-proof/run/v2",
+      "kind": "proof-run",
+      "identity": [
+        "run_id"
+      ],
+      "metrics": [
+        "duration_ms",
+        "record_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-proof/v1",
+      "kind": "legacy-proof",
+      "identity": [
+        "run_id"
+      ],
+      "metrics": [],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-resume/v1",
+      "kind": "resume",
+      "identity": [
+        "run_id",
+        "resume_id",
+        "checkpoint_id"
+      ],
+      "metrics": [
+        "duration_ms",
+        "step_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-sandbox/v1",
+      "kind": "sandbox",
+      "identity": [
+        "run_id",
+        "receipt_id"
+      ],
+      "metrics": [
+        "duration_ms"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-trace/v1",
+      "kind": "trace",
+      "identity": [
+        "run_id",
+        "trace_id"
+      ],
+      "metrics": [
+        "duration_ms",
+        "event_count",
+        "span_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "ai-work-evidence/v1",
+      "kind": "shared-evidence",
+      "identity": [
+        "evidence_id",
+        "source"
+      ],
+      "metrics": [],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "context-integrity/v1",
+      "kind": "context-integrity",
+      "identity": [
+        "person_id",
+        "project_id"
+      ],
+      "metrics": [
+        "citation_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "context-pack/v1",
+      "kind": "context",
+      "identity": [
+        "run_id",
+        "pack_id"
+      ],
+      "metrics": [
+        "source_count",
+        "file_count",
+        "byte_count"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    }
+  ]
+}
