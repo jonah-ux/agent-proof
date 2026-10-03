@@ -80,7 +80,10 @@
     "secrets": false
   },
   "owner_codes": {
-    "fields": ["owner_status", "owner_code"],
+    "fields": [
+      "owner_status",
+      "owner_code"
+    ],
     "mode": "preserve-verbatim",
     "unknown_policy": "do-not-infer"
   },
@@ -105,8 +108,8 @@
         "agent-proof-lab-conformance/v1"
       ],
       "conformance_artifact": {
-        "url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
-        "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930",
+        "url": "https://github.com/jonah-ux/agent-proof/blob/a5e0c864bfbb71bf8268c879ae92d65d5f58687e/conformance/agent-systems-lab.json",
+        "revision": "a5e0c864bfbb71bf8268c879ae92d65d5f58687e",
         "sha256": "e702ec462db47205989e05f593b5e1d87679b8293c3d13d409db7babf56ba98e"
       }
     },
@@ -344,6 +347,46 @@
       "source": "src/agent_proof/interop.py:ADAPTERS"
     },
     {
+      "schema": "agent-sandbox/v2",
+      "kind": "sandbox",
+      "identity": [],
+      "metrics": [
+        "duration_ms"
+      ],
+      "digests": [
+        "command_sha256",
+        "stdout_sha256",
+        "stderr_sha256",
+        "receipt_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-trace/inspect/v1",
+      "kind": "trace-inspect",
+      "identity": [],
+      "metrics": [
+        "events",
+        "source_lines",
+        "blank_lines",
+        "redactions"
+      ],
+      "digests": [
+        "raw_sha256",
+        "redacted_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "agent-trace/query/v1",
+      "kind": "trace-query",
+      "identity": [],
+      "metrics": [
+        "matched"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
       "schema": "agent-trace/v1",
       "kind": "trace",
       "identity": [
@@ -391,6 +434,25 @@
         "file_count",
         "byte_count"
       ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "mcp-doctor/v1",
+      "kind": "mcp-diagnostics",
+      "identity": [],
+      "metrics": [],
+      "source": "src/agent_proof/interop.py:ADAPTERS",
+      "digests": [
+        "fingerprint"
+      ]
+    },
+    {
+      "schema": "worktree-conservator.result/v1",
+      "kind": "worktree",
+      "identity": [
+        "command"
+      ],
+      "metrics": [],
       "source": "src/agent_proof/interop.py:ADAPTERS"
     }
   ]

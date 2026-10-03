@@ -11,23 +11,28 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import json
 import re
 from typing import Any
 
 from .ledger import (
     ProofError,
     _HEX64,
+    _as_mapping,
     _rooted_file,
     _safe_relative,
     digest_bytes,
     digest_json,
-    load_json,
 )
 
 
 INTEROP_SCHEMA = "agent-proof/interop/v1"
 INTEROP_VERIFY_SCHEMA = "agent-proof/interop-verify/v1"
 FORGEYARD_EVIDENCE_SCHEMA = "ai-work-evidence/v1"
+
+# Native counters must round-trip through interoperable JSON integer readers.
+# Legacy adapter ranges remain unchanged.
+MAX_NATIVE_INTEGER = (1 << 53) - 1
 
 _FORGEYARD_STATUSES = frozenset({"observed", "verified", "failed", "unknown"})
 _FORGEYARD_SOURCES = frozenset({"atlas", "chatlens", "forgeyard"})
@@ -48,6 +53,14 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "identity": ("run_id", "receipt_id"),
         "metrics": ("duration_ms",),
     },
+    "agent-sandbox/v2": {
+        "kind": "sandbox",
+        "identity": (),
+        "metrics": ("duration_ms",),
+        "digests": ("command_sha256", "stdout_sha256", "stderr_sha256", "receipt_sha256"),
+        "max_integer": MAX_NATIVE_INTEGER,
+        "min_exit_code": -MAX_NATIVE_INTEGER,
+    },
     "agent-eval/v1": {
         "kind": "evaluation",
         "identity": ("run_id", "evaluation_id", "candidate_id"),
@@ -57,6 +70,19 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "kind": "trace",
         "identity": ("run_id", "trace_id"),
         "metrics": ("duration_ms", "event_count", "span_count"),
+    },
+    "agent-trace/inspect/v1": {
+        "kind": "trace-inspect",
+        "identity": (),
+        "metrics": ("events", "source_lines", "blank_lines", "redactions"),
+        "digests": ("raw_sha256", "redacted_sha256"),
+        "max_integer": MAX_NATIVE_INTEGER,
+    },
+    "agent-trace/query/v1": {
+        "kind": "trace-query",
+        "identity": (),
+        "metrics": ("matched",),
+        "max_integer": MAX_NATIVE_INTEGER,
     },
     "context-pack/v1": {
         "kind": "context",
@@ -72,6 +98,19 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "kind": "context-integrity",
         "identity": ("person_id", "project_id"),
         "metrics": ("citation_count",),
+    },
+    "mcp-doctor/v1": {
+        "kind": "mcp-diagnostics",
+        "identity": (),
+        "metrics": (),
+        "digests": ("fingerprint",),
+        "max_integer": MAX_NATIVE_INTEGER,
+    },
+    "worktree-conservator.result/v1": {
+        "kind": "worktree",
+        "identity": ("command",),
+        "metrics": (),
+        "max_integer": MAX_NATIVE_INTEGER,
     },
     FORGEYARD_EVIDENCE_SCHEMA: {
         "kind": "shared-evidence",
@@ -207,12 +246,24 @@ def _state(payload: dict[str, Any], key: str, unknowns: list[str]) -> bool | Non
     return value
 
 
-def _optional_int(payload: dict[str, Any], key: str, unknowns: list[str]) -> int | None:
+def _valid_integer(value: Any, maximum: int | None = None, minimum: int = 0) -> bool:
+    return (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and value >= minimum
+        and (maximum is None or value <= maximum)
+    )
+
+
+def _optional_int(
+    payload: dict[str, Any], key: str, unknowns: list[str], maximum: int | None = None,
+    minimum: int = 0,
+) -> int | None:
     if key not in payload:
         unknowns.append(f"{key}_not_declared")
         return None
     value = payload[key]
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+    if not _valid_integer(value, maximum, minimum):
         unknowns.append(f"{key}_malformed")
         return None
     return value
@@ -226,6 +277,20 @@ def _identity(payload: dict[str, Any], fields: tuple[str, ...], unknowns: list[s
         value = payload[field]
         if isinstance(value, str) and value:
             result[f"{field}_sha256"] = digest_bytes(value.encode("utf-8"))
+        else:
+            unknowns.append(f"{field}_malformed")
+    return result
+
+
+def _digests(payload: dict[str, Any], fields: tuple[str, ...], unknowns: list[str]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for field in fields:
+        if field not in payload:
+            unknowns.append(f"{field}_not_declared")
+            continue
+        value = payload[field]
+        if isinstance(value, str) and _HEX64.fullmatch(value):
+            result[field] = value
         else:
             unknowns.append(f"{field}_malformed")
     return result
@@ -277,22 +342,25 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
     # ``outcome`` is only a restatement of an explicit boolean ``ok``.  It is
     # never inferred from an exit code, timeout, or a truthy arbitrary field.
     outcome = None if status["ok"] is None else ("success" if status["ok"] else "failure")
-    exit_code = _optional_int(payload, "exit_code", unknowns)
+    maximum = adapter.get("max_integer")
+    exit_code = _optional_int(payload, "exit_code", unknowns, maximum, adapter.get("min_exit_code", 0))
     metrics: dict[str, int] = {}
     for key in adapter["metrics"]:
         if key not in payload:
             unknowns.append(f"{key}_not_declared")
             continue
         value = payload[key]
-        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        if not _valid_integer(value, maximum):
             unknowns.append(f"{key}_malformed")
             continue
         metrics[key] = value
+    digests = _digests(payload, adapter.get("digests", ()), unknowns)
     known_fields = sorted(
         set(field for field in _STATUS_FIELDS if field in payload)
         | set(field for field in ("exit_code",) if field in payload)
         | set(field for field in adapter["metrics"] if field in payload)
         | set(field for field in adapter["identity"] if field in payload)
+        | set(field for field in adapter.get("digests", ()) if field in payload)
     )
     return {
         "status": {
@@ -306,6 +374,7 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
         "identity": _identity(payload, adapter["identity"], unknowns),
         "metrics": metrics,
         "declared_fields": known_fields,
+        **({"digests": digests} if adapter.get("digests") else {}),
     }, _unique(unknowns)
 
 
@@ -355,18 +424,29 @@ def normalize_payload(
     return normalized
 
 
+def _capture_source(path: Path) -> tuple[dict[str, Any], bytes]:
+    """Bind JSON parsing, size, and hash to one captured byte buffer."""
+
+    try:
+        raw = path.read_bytes()
+        value = json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ProofError(f"cannot read JSON {path}: {exc}") from exc
+    return _as_mapping(value, str(path)), raw
+
+
 def normalize_envelope(path: Path, *, artifact_root: Path) -> dict[str, Any]:
     """Read and normalize one known sibling envelope under ``artifact_root``."""
 
     root = artifact_root.expanduser().resolve()
     relative = _source_relative(path, root)
     target = _rooted_file(root, relative, "interop input")
-    payload = load_json(target)
+    payload, raw = _capture_source(target)
     return normalize_payload(
         payload,
         source_path=relative,
-        source_size=target.stat().st_size,
-        source_sha256=digest_bytes(target.read_bytes()),
+        source_size=len(raw),
+        source_sha256=digest_bytes(raw),
     )
 
 
@@ -415,6 +495,8 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
         errors.append("projection must be an object")
     else:
         source_schema = source.get("schema") if isinstance(source, dict) else None
+        maximum = ADAPTERS.get(source_schema, {}).get("max_integer") if isinstance(source_schema, str) else None
+        minimum_exit = ADAPTERS.get(source_schema, {}).get("min_exit_code", 0) if isinstance(source_schema, str) else 0
         status = projection.get("status")
         if not isinstance(status, dict):
             errors.append("projection.status must be an object")
@@ -430,7 +512,7 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
                 errors.append("projection.status.outcome disagrees with ok")
             if status.get("ok") is False and status.get("outcome") != "failure":
                 errors.append("projection.status.outcome disagrees with ok")
-            if status.get("exit_code") is not None and (not isinstance(status.get("exit_code"), int) or isinstance(status.get("exit_code"), bool) or status.get("exit_code") < 0):
+            if status.get("exit_code") is not None and not _valid_integer(status.get("exit_code"), maximum, minimum_exit):
                 errors.append("projection.status.exit_code is invalid")
             if source_schema == FORGEYARD_EVIDENCE_SCHEMA:
                 shared = status.get("shared")
@@ -462,18 +544,32 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
             if set(identity) - allowed_identity:
                 errors.append("projection.identity contains an unsupported field")
         metrics = projection.get("metrics")
-        if not isinstance(metrics, dict) or any(not isinstance(key, str) or not isinstance(value, int) or isinstance(value, bool) or value < 0 for key, value in (metrics.items() if isinstance(metrics, dict) else [])):
+        if not isinstance(metrics, dict) or any(not isinstance(key, str) or not _valid_integer(value, maximum) for key, value in (metrics.items() if isinstance(metrics, dict) else [])):
             errors.append("projection.metrics is malformed")
         if isinstance(source, dict) and isinstance(source.get("schema"), str) and isinstance(metrics, dict):
             allowed_metrics = set(ADAPTERS.get(source["schema"], {}).get("metrics", ()))
             if set(metrics) - allowed_metrics:
                 errors.append("projection.metrics contains an unsupported field")
+        digests = projection.get("digests")
+        if digests is not None:
+            if not isinstance(digests, dict) or any(
+                not isinstance(key, str)
+                or not isinstance(value, str)
+                or not _HEX64.fullmatch(value)
+                for key, value in (digests.items() if isinstance(digests, dict) else [])
+            ):
+                errors.append("projection.digests is malformed")
+            if isinstance(source, dict) and isinstance(source.get("schema"), str) and isinstance(digests, dict):
+                allowed_digests = set(ADAPTERS.get(source["schema"], {}).get("digests", ()))
+                if set(digests) - allowed_digests:
+                    errors.append("projection.digests contains an unsupported field")
         fields = projection.get("declared_fields")
         if not isinstance(fields, list) or fields != sorted(set(fields)) or any(not isinstance(item, str) for item in fields):
             errors.append("projection.declared_fields is malformed")
         if isinstance(source, dict) and isinstance(source.get("schema"), str) and isinstance(fields, list):
             adapter = ADAPTERS.get(source["schema"], {})
             allowed_fields = set(_STATUS_FIELDS) | {"exit_code"} | set(adapter.get("identity", ())) | set(adapter.get("metrics", ()))
+            allowed_fields |= set(adapter.get("digests", ()))
             if source["schema"] == FORGEYARD_EVIDENCE_SCHEMA:
                 allowed_fields |= {"artifacts", "status"}
             if set(fields) - allowed_fields:
@@ -552,17 +648,19 @@ def verify_interop(
                     candidate = root / candidate
                 relative = _source_relative(candidate, root)
                 target = _rooted_file(root, relative, "interop source")
-                source_payload = load_json(target)
+                source_payload, raw = _capture_source(target)
+                captured_size = len(raw)
+                captured_sha256 = digest_bytes(raw)
                 source_entry = document.get("source", {})
                 if relative != source_entry.get("path"):
                     errors.append("source path does not match normalized envelope")
-                if target.stat().st_size != source_entry.get("size") or digest_bytes(target.read_bytes()) != source_entry.get("sha256"):
+                if captured_size != source_entry.get("size") or captured_sha256 != source_entry.get("sha256"):
                     errors.append(f"source digest or size mismatch: {relative}")
                 regenerated = normalize_payload(
                     source_payload,
                     source_path=relative,
-                    source_size=target.stat().st_size,
-                    source_sha256=digest_bytes(target.read_bytes()),
+                    source_size=captured_size,
+                    source_sha256=captured_sha256,
                 )
                 if _unsigned(regenerated) != _unsigned(document):
                     errors.append("normalized projection does not match source")

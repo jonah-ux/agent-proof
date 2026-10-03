@@ -9,6 +9,7 @@ from agent_proof.compatibility import (
     manifest_digest,
     validate_manifest,
 )
+from agent_proof.interop import ADAPTERS
 
 
 ROOT = Path(__file__).parents[1]
@@ -16,9 +17,20 @@ MANIFEST_PATH = ROOT / "conformance" / "compatibility-v1.json"
 
 
 class CompatibilityManifestTests(unittest.TestCase):
+    def test_declared_adapter_fields_match_the_runtime_registry(self):
+        payload = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        self.assertEqual({item["schema"] for item in payload["adapters"]}, set(ADAPTERS))
+        for item in payload["adapters"]:
+            with self.subTest(schema=item["schema"]):
+                adapter = ADAPTERS[item["schema"]]
+                self.assertEqual(item["kind"], adapter["kind"])
+                for field in ("identity", "metrics", "digests"):
+                    self.assertEqual(item.get(field, []), list(adapter.get(field, ())))
+
     def test_public_manifest_is_valid_and_digest_is_stable(self):
         payload = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         self.assertEqual(payload["schema"], COMPATIBILITY_SCHEMA)
+        self.assertEqual(len(payload["adapters"]), 18)
         self.assertEqual(validate_manifest(payload), [])
         report = check_manifest(MANIFEST_PATH)
         self.assertTrue(report["ok"])
