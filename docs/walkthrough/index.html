@@ -121,6 +121,9 @@
       .state { animation: settle .35s ease-out; }
       @keyframes settle { from { opacity: .45; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     }
+
+    .hero-card{position:relative;overflow:hidden}.hero-card::after{content:"";position:absolute;right:-56px;top:-54px;width:170px;height:170px;border:1px solid #a9f27d2e;border-radius:50%;box-shadow:0 0 0 18px #a9f27d0d,0 0 0 36px #a9f27d08}.proof-radar{display:block;width:100%;height:auto;margin:0 0 17px}.proof-radar .spark{fill:var(--green);filter:drop-shadow(0 0 7px var(--green))}.mission-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}.mission-actions button{font-size:.68rem;padding:8px 10px}.mission-status{min-height:2.7em;margin:10px 0 0!important;font-size:.72rem!important}.chain-guide{display:flex;align-items:center;gap:9px;margin:0 0 18px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#0d1712;color:var(--muted);font-size:.72rem}.chain-guide strong{color:var(--green);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}.chain-guide span{height:1px;flex:1;background:linear-gradient(90deg,var(--green-dim),transparent)}.node[data-step]{cursor:pointer}.node[data-step][aria-current=true]{border-color:var(--green);background:#183122;box-shadow:0 0 0 2px #a9f27d1a}.node[data-step]:focus-visible{outline:2px solid var(--green);outline-offset:3px}.focus-copy{margin:13px 0 0!important;min-height:2.4em;color:var(--muted);font-size:.74rem}.state.fail + .actions button,.state.reset + .actions button{transition:none}
+    @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
   </style>
 </head>
 <body>
@@ -142,10 +145,12 @@
         </div>
       </div>
       <aside class="hero-card" aria-label="Standalone promise">
+        <svg class="proof-radar" viewBox="0 0 320 86" role="img" aria-label="Observed evidence flows through a digest gate into a refusal-safe bundle"><path d="M14 43h78m38 0h56m38 0h82" fill="none" stroke="#2b3a33" stroke-width="2" stroke-dasharray="5 6"/><circle cx="14" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle cx="112" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle cx="190" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle class="spark" cx="306" cy="43" r="10"/><g fill="#a5aaa4" font-size="9" font-family="ui-monospace,monospace" text-anchor="middle"><text x="14" y="72">OBSERVE</text><text x="112" y="72">BIND</text><text x="190" y="72">VERIFY</text><text x="306" y="72">REFUSE</text></g></svg>
         <p class="eyebrow">Standalone by design</p>
         <h2>Install this repo. Run this repo.</h2>
         <p>Agent Proof ships as its own Python package with zero runtime dependencies. The proof format can interoperate with other envelopes, but no sibling Jonah-UX repository or service is required.</p>
         <div class="tag-row"><span class="tag">Python ≥ 3.11</span><span class="tag">MIT</span><span class="tag">CLI + library</span></div>
+        <div class="mission-actions" role="group" aria-label="Launch the synthetic proof readback"><button id="hero-seal" type="button">Seal fixture</button><button id="hero-refuse" type="button">Tamper + refuse</button></div><p id="mission-status" class="mission-status" role="status" aria-live="polite">Choose a readback to see the proof gate move.</p>
       </aside>
     </section>
 
@@ -155,13 +160,13 @@
           <div><div class="panel-kicker">01 / provenance</div><h2>One chain, six readable stops</h2></div>
           <span class="tag">fixture graph</span>
         </div>
-        <div class="chain" role="list" aria-label="Synthetic proof chain">
-          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">01</div><div class="node-name">Policy</div><div class="node-hash">8f4c…a91d</div></div><span class="arrow" aria-hidden="true"></span></div>
-          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">02</div><div class="node-name">Sandbox</div><div class="node-hash">12dd…08c2</div></div><span class="arrow" aria-hidden="true"></span></div>
-          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">03</div><div class="node-name">Evaluation</div><div class="node-hash">d2b7…e440</div></div><span class="arrow" aria-hidden="true"></span></div>
-          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">04</div><div class="node-name">Record</div><div class="node-hash">b5fe…9e17</div></div><span class="arrow" aria-hidden="true"></span></div>
-          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">05</div><div class="node-name">Run proof</div><div class="node-hash">f11a…c805</div></div><span class="arrow" aria-hidden="true"></span></div>
-          <div class="node-wrap" role="listitem"><div class="node"><div class="node-index">06</div><div class="node-name">Bundle</div><div class="node-hash">a09c…7bd3</div></div></div>
+        <div class="chain-guide"><strong id="chain-focus">Observe</strong><span></span><span>click a stop to inspect the boundary</span></div><svg class="proof-radar" viewBox="0 0 760 34" role="img" aria-label="A line connecting six proof stages"><path d="M18 17H742" fill="none" stroke="#355d42" stroke-width="2" stroke-dasharray="7 8"/><circle cx="18" cy="17" r="7" fill="#a9f27d"/><circle cx="166" cy="17" r="7" fill="#355d42"/><circle cx="314" cy="17" r="7" fill="#355d42"/><circle cx="462" cy="17" r="7" fill="#355d42"/><circle cx="610" cy="17" r="7" fill="#355d42"/><circle cx="742" cy="17" r="7" fill="#355d42"/></svg><div class="chain" role="list" aria-label="Synthetic proof chain">
+          <div class="node-wrap" role="listitem"><div class="node" data-step="policy" tabindex="0" role="button" aria-current="true"><div class="node-index">01</div><div class="node-name">Policy</div><div class="node-hash">8f4c…a91d</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node" data-step="sandbox" tabindex="0" role="button" aria-current="false"><div class="node-index">02</div><div class="node-name">Sandbox</div><div class="node-hash">12dd…08c2</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node" data-step="evaluation" tabindex="0" role="button" aria-current="false"><div class="node-index">03</div><div class="node-name">Evaluation</div><div class="node-hash">d2b7…e440</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node" data-step="record" tabindex="0" role="button" aria-current="false"><div class="node-index">04</div><div class="node-name">Record</div><div class="node-hash">b5fe…9e17</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node" data-step="proof" tabindex="0" role="button" aria-current="false"><div class="node-index">05</div><div class="node-name">Run proof</div><div class="node-hash">f11a…c805</div></div><span class="arrow" aria-hidden="true"></span></div>
+          <div class="node-wrap" role="listitem"><div class="node" data-step="bundle" tabindex="0" role="button" aria-current="false"><div class="node-index">06</div><div class="node-name">Bundle</div><div class="node-hash">a09c…7bd3</div></div></div>
         </div>
         <p class="note">Every label above is fixture data for the picture. Run <code>demos/demo.py</code> for real local hashes and a deterministic export.</p>
       </article>
@@ -172,7 +177,7 @@
           <span class="state-dot" aria-hidden="true"></span><div><strong id="state-title">SEALED</strong><small id="state-copy">fixture bytes match the proof record</small></div>
         </div>
         <div class="actions"><button class="primary" id="verify" type="button">Verify clean fixture</button><button id="tamper" type="button">Tamper artifact</button><button id="reset" type="button">Reset</button></div>
-        <div class="facts"><div class="fact"><span class="fact-label">Observed</span><span class="fact-value" id="observed">true</span></div><div class="fact"><span class="fact-label">Unknowns</span><span class="fact-value" id="unknowns">0</span></div><div class="fact"><span class="fact-label">Records</span><span class="fact-value">2 linked</span></div><div class="fact"><span class="fact-label">Raw output</span><span class="fact-value">never stored</span></div></div>
+        <div class="facts"><div class="fact"><span class="fact-label">Observed</span><span class="fact-value" id="observed">true</span></div><div class="fact"><span class="fact-label">Unknowns</span><span class="fact-value" id="unknowns">0</span></div><div class="fact"><span class="fact-label">Records</span><span class="fact-value">2 linked</span></div><div class="fact"><span class="fact-label">Raw output</span><span class="fact-value">never stored</span></div></div><p id="focus-copy" class="focus-copy">Policy declares what this fixture is allowed to claim before any bytes are sealed.</p>
       </article>
 
       <article class="panel walkthrough">
@@ -222,6 +227,10 @@ python3 demos/demo.py</code></div>
     const mode = document.querySelector('#mode-tag');
     const observed = document.querySelector('#observed');
     const unknowns = document.querySelector('#unknowns');
+    const missionStatus = document.querySelector('#mission-status');
+    const focusCopy = document.querySelector('#focus-copy');
+    const focusTitle = document.querySelector('#chain-focus');
+    const stepCopy = {policy:'Policy declares what this fixture is allowed to claim before any bytes are sealed.',sandbox:'Sandbox records the bounded execution boundary; raw output stays outside the proof.',evaluation:'Evaluation contributes a result that remains tied to the exact fixture inputs.',record:'The record names the task, evidence, and boundary in one readable envelope.',proof:'Run proof binds the observed evidence to a digest and refuses a changed artifact.',bundle:'The bundle is the portable readback; it is useful only when every link still matches.'};
     function show(kind, nextTitle, nextCopy, nextMode, nextObserved, nextUnknowns) {
       state.className = `state ${kind}`;
       title.textContent = nextTitle;
@@ -229,10 +238,15 @@ python3 demos/demo.py</code></div>
       mode.textContent = nextMode;
       observed.textContent = nextObserved;
       unknowns.textContent = nextUnknowns;
+      missionStatus.textContent = nextTitle === 'REFUSED' ? 'The changed artifact stopped publication at the digest gate.' : nextTitle === 'SEALED' ? 'The fixture is sealed. Pick a chain stop to inspect its boundary.' : 'Reset the fixture, then choose a clean or tampered readback.';
     }
+    function focusStep(step) { document.querySelectorAll('[data-step]').forEach(node => node.setAttribute('aria-current', String(node.dataset.step === step))); focusTitle.textContent = step === 'proof' ? 'Verify' : step[0].toUpperCase() + step.slice(1); focusCopy.textContent = stepCopy[step]; }
+    document.querySelectorAll('[data-step]').forEach(node => { node.addEventListener('click', () => focusStep(node.dataset.step)); node.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); focusStep(node.dataset.step); } }); });
     document.querySelector('#verify').addEventListener('click', () => show('', 'SEALED', 'fixture bytes match the proof record', 'clean run', 'true', '0'));
     document.querySelector('#tamper').addEventListener('click', () => show('fail', 'REFUSED', 'artifact digest changed; stale proof cannot pass', 'tampered fixture', 'false', '1'));
     document.querySelector('#reset').addEventListener('click', () => show('reset', 'READY', 'fixture is waiting for a verification readback', 'reset', 'unknown', 'unknown'));
+    document.querySelector('#hero-seal').addEventListener('click', () => document.querySelector('#verify').click());
+    document.querySelector('#hero-refuse').addEventListener('click', () => document.querySelector('#tamper').click());
   </script>
 </body>
 </html>
