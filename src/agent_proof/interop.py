@@ -30,6 +30,7 @@ INTEROP_SCHEMA = "agent-proof/interop/v1"
 INTEROP_VERIFY_SCHEMA = "agent-proof/interop-verify/v1"
 FORGEYARD_EVIDENCE_SCHEMA = "ai-work-evidence/v1"
 SOURCEMARK_CHECK_SCHEMA = "sourcemark/check/v1"
+POLICY_RECEIPT_SCHEMA = "agent-policy/receipt/v1"
 
 # Native counters must round-trip through interoperable JSON integer readers.
 # Legacy adapter ranges remain unchanged.
@@ -42,6 +43,7 @@ _FORGEYARD_ARTIFACT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
 _FORGEYARD_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SOURCEMARK_HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
 _SOURCEMARK_STATES = frozenset({"ok", "observed", "partial", "timed_out"})
+_POLICY_DECISIONS = frozenset({"allow", "deny"})
 
 # The registry is deliberately explicit.  A generic JSON file is not evidence
 # from a known sibling until its schema has a reviewed adapter here.
@@ -50,6 +52,14 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "kind": "policy",
         "identity": ("run_id", "policy_id"),
         "metrics": (),
+    },
+    POLICY_RECEIPT_SCHEMA: {
+        "kind": "policy-receipt",
+        "identity": (),
+        "metrics": ("rule_count", "operation_count"),
+        "digests": ("policy_sha256", "request_sha256"),
+        "declared_fields": ("decision", "performed", "receipt_version"),
+        "max_integer": MAX_NATIVE_INTEGER,
     },
     "agent-sandbox/v1": {
         "kind": "sandbox",
@@ -370,6 +380,60 @@ def _validate_sourcemark_check(payload: dict[str, Any]) -> None:
     for field in ("policy_sha256", "session_sha256"):
         if not isinstance(payload.get(field), str) or not _SOURCEMARK_HASH.fullmatch(payload[field]):
             raise ProofError("Sourcemark check export identity is malformed")
+
+
+def _validate_policy_receipt(payload: dict[str, Any]) -> None:
+    allowed = {"schema", "receipt_version", "tool", "mode", "performed", "result", "notice"}
+    if set(payload) != allowed:
+        raise ProofError("Agent Policy receipt has an unsupported field set")
+    if payload.get("schema") != POLICY_RECEIPT_SCHEMA or payload.get("receipt_version") != 1:
+        raise ProofError("unsupported Agent Policy receipt schema")
+    if payload.get("tool") != "agent-policy" or payload.get("mode") not in {"check", "explain", "dry-run"}:
+        raise ProofError("Agent Policy receipt identity is invalid")
+    if payload.get("performed") is not False or not isinstance(payload.get("notice"), str):
+        raise ProofError("Agent Policy receipt boundary is invalid")
+    result = payload.get("result")
+    if not isinstance(result, dict) or result.get("decision") not in _POLICY_DECISIONS:
+        raise ProofError("Agent Policy receipt decision is invalid")
+    for section, digest_field, count_field in (("policy", "policy_sha256", "rule_count"), ("request", "request_sha256", "operation_count")):
+        value = result.get(section)
+        if value is None:
+            continue
+        if not isinstance(value, dict) or not isinstance(value.get("sha256"), str) or not _HEX64.fullmatch(value["sha256"]):
+            raise ProofError(f"Agent Policy receipt {section} digest is malformed")
+        if not _valid_integer(value.get(count_field), MAX_NATIVE_INTEGER):
+            raise ProofError(f"Agent Policy receipt {section} count is malformed")
+
+
+def _policy_receipt_projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    _validate_policy_receipt(payload)
+    result = payload["result"]
+    decision = result["decision"]
+    unknowns = ["outcome_unknown"]
+    metrics: dict[str, int] = {}
+    digests: dict[str, str] = {}
+    for section, digest_field, count_field in (("policy", "policy_sha256", "rule_count"), ("request", "request_sha256", "operation_count")):
+        value = result.get(section)
+        if value is None:
+            unknowns.extend((f"{count_field}_not_declared", f"{digest_field}_not_declared"))
+            continue
+        metrics[count_field] = value[count_field]
+        digests[digest_field] = value["sha256"]
+    return {
+        "status": {
+            "ok": decision == "allow",
+            "observed": True,
+            "partial": False,
+            "timed_out": False,
+            "outcome": None,
+            "exit_code": None,
+            "owner_status": decision,
+        },
+        "identity": {},
+        "metrics": metrics,
+        "declared_fields": sorted(set(metrics) | set(digests) | {"decision", "performed", "receipt_version"}),
+        "digests": digests,
+    }, _unique(unknowns)
 def _slipstream_query_projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """Project Slipstream query results without copying caller-owned rows."""
 
@@ -474,6 +538,8 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
             "declared_fields": sorted(set(payload["counts"]) | {"policy_sha256", "session_sha256"}),
             "digests": {field: payload[field] for field in adapter["digests"]},
         }, _unique(unknowns)
+    if adapter["kind"] == "policy-receipt":
+        return _policy_receipt_projection(payload, adapter)
     if payload.get("schema") == "slipstream/query/v1":
         return _slipstream_query_projection(payload, adapter)
 
@@ -646,12 +712,20 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
                     errors.append(f"projection.status.{key} must be boolean or null")
             if status.get("outcome") not in {None, "success", "failure"}:
                 errors.append("projection.status.outcome is invalid")
-            if status.get("ok") is None and status.get("outcome") is not None:
-                errors.append("projection.status.outcome requires an explicit ok field")
-            if status.get("ok") is True and status.get("outcome") != "success":
-                errors.append("projection.status.outcome disagrees with ok")
-            if status.get("ok") is False and status.get("outcome") != "failure":
-                errors.append("projection.status.outcome disagrees with ok")
+            if source_schema == POLICY_RECEIPT_SCHEMA:
+                if status.get("owner_status") not in _POLICY_DECISIONS:
+                    errors.append("projection.status.owner_status is invalid")
+                elif status.get("ok") != (status.get("owner_status") == "allow"):
+                    errors.append("projection.status does not preserve policy decision")
+                if status.get("outcome") is not None:
+                    errors.append("policy receipt projection must not infer an outcome")
+            else:
+                if status.get("ok") is None and status.get("outcome") is not None:
+                    errors.append("projection.status.outcome requires an explicit ok field")
+                if status.get("ok") is True and status.get("outcome") != "success":
+                    errors.append("projection.status.outcome disagrees with ok")
+                if status.get("ok") is False and status.get("outcome") != "failure":
+                    errors.append("projection.status.outcome disagrees with ok")
             if status.get("exit_code") is not None and not _valid_integer(status.get("exit_code"), maximum, minimum_exit):
                 errors.append("projection.status.exit_code is invalid")
             if source_schema == FORGEYARD_EVIDENCE_SCHEMA:

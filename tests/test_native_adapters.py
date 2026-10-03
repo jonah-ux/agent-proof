@@ -373,6 +373,53 @@ class NativeAdapterTests(unittest.TestCase):
         self.assertIn("raw_sha256_malformed", normalized["unknowns"])
         self.assertNotIn("raw_sha256", normalized["projection"].get("digests", {}))
 
+    def test_agent_policy_receipt_preserves_decision_without_inferencing_execution(self):
+        source = self._write(
+            "policy-receipt.json",
+            {
+                "schema": "agent-policy/receipt/v1",
+                "receipt_version": 1,
+                "tool": "agent-policy",
+                "mode": "explain",
+                "performed": False,
+                "notice": "synthetic policy receipt",
+                "result": {
+                    "decision": "deny",
+                    "policy": {"version": 1, "sha256": "a" * 64, "rule_count": 2},
+                    "request": {"version": 1, "sha256": "b" * 64, "operation_count": 3},
+                    "operations": [{"target": "private/path", "decision": "deny"}],
+                },
+            },
+        )
+        normalized = normalize_envelope(source, artifact_root=self.root)
+        status = normalized["projection"]["status"]
+        self.assertEqual(normalized["adapter"]["kind"], "policy-receipt")
+        self.assertEqual(status["owner_status"], "deny")
+        self.assertIs(status["ok"], False)
+        self.assertIsNone(status["outcome"])
+        self.assertEqual(normalized["projection"]["metrics"], {"rule_count": 2, "operation_count": 3})
+        self.assertEqual(set(normalized["projection"]["digests"]), {"policy_sha256", "request_sha256"})
+        self.assertNotIn("private/path", json.dumps(normalized))
+        self.assertTrue(verify_interop(normalized, artifact_root=self.root, require_input=True)["ok"])
+
+    def test_agent_policy_receipt_check_shape_keeps_missing_detail_unknown(self):
+        source = self._write(
+            "policy-check-receipt.json",
+            {
+                "schema": "agent-policy/receipt/v1",
+                "receipt_version": 1,
+                "tool": "agent-policy",
+                "mode": "check",
+                "performed": False,
+                "notice": "synthetic policy receipt",
+                "result": {"decision": "allow"},
+            },
+        )
+        normalized = normalize_envelope(source, artifact_root=self.root)
+        self.assertIn("rule_count_not_declared", normalized["unknowns"])
+        self.assertIn("policy_sha256_not_declared", normalized["unknowns"])
+        self.assertTrue(verify_interop(normalized, artifact_root=self.root, require_input=True)["ok"])
+
 
 if __name__ == "__main__":
     unittest.main()
