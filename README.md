@@ -232,7 +232,9 @@ agent-proof verify-interop ./run-files/evaluation.interop.json \
 `verify-interop` can also verify the envelope's own canonical hash without a source root, but that
 result is marked `source_not_bound` and cannot establish that the source file still matches. A
 changed source, changed normalized projection, unsupported adapter, malformed scalar, or symlinked
-input fails closed. This adapter is an import boundary, not an outcome oracle: an intact envelope
+input fails closed. The current Agent Sandbox Run owner emits `agent-sandbox/v2`; the older
+`agent-sandbox/v1` entry is retained only for legacy fixtures. This adapter is an import boundary,
+not an outcome oracle: an intact envelope
 with `observed: null` or explicit unknowns remains unknown.
 
 ### 7. Derive and verify a provenance graph

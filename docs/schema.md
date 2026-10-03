@@ -91,6 +91,8 @@ The native adapter set additionally recognizes `agent-sandbox/v2`,
 `slipstream/query/v1`, `slipstream/inspect/v1`, `slipstream/manifest/v1`,
 `slipstream/verify/v1`, and `worktree-conservator.result/v1`. Native integer metrics are limited to
 `0..9007199254740991` so they retain exact value in JSON integer consumers.
+The current Agent Sandbox Run owner emits `agent-sandbox/v2`; the `agent-sandbox/v1` adapter is
+retained only for legacy fixtures and is not a claim about current owner output.
 Native Sandbox signal exit codes retain a signed value within the same absolute
 limit; other native exit codes remain non-negative. Legacy adapter ranges are
 unchanged. Out-of-range native values become explicit malformed-field unknowns,

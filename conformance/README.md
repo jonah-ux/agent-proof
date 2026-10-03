@@ -20,6 +20,10 @@ Agent Proof consumes the contract through its native interop adapter, preserving
 `verified`, `failed`, and `unknown` status values while refusing unsupported versions, unsafe
 artifact names, malformed hashes, and malformed documents.
 
+Agent Sandbox Run currently owns `agent-sandbox/v2`, including backend/enforcement disclosure and
+receipt digests. The `agent-sandbox/v1` adapter remains only for legacy source fixtures; it is not
+listed as the current owner schema and is not used to reinterpret v2 receipts.
+
 The Sourcemark adapter fixture in [`sourcemark-check-v1.json`](sourcemark-check-v1.json) pins the
 public `sourcemark/check/v1` source implementation and keeps the projection bounded to six counts
 and two `sha256:` identities. `ok` is the only state that maps to a successful outcome; `observed`,
