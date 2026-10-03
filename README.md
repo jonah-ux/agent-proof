@@ -27,6 +27,11 @@ The synthetic demo composes policy, sandbox, and evaluation JSON envelopes, crea
 records, merges them, tampers with an artifact, proves that verification refuses it, restores the
 artifact, and exports a deterministic tarball. It never reads local transcripts or credentials.
 
+The Agent Systems Lab conformance corpus lives in [`conformance/agent-systems-lab.json`](conformance/agent-systems-lab.json)
+and exercises the reviewed policy, sandbox, evaluation, trace, context-pack, resume, and
+context-integrity adapters. It keeps source values synthetic and verifies that normalization
+preserves only allowlisted signals and digests.
+
 Example result:
 
 ```json
