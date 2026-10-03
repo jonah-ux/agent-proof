@@ -87,6 +87,35 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "metrics": ("matched",),
         "max_integer": MAX_NATIVE_INTEGER,
     },
+    "slipstream/inspect/v1": {
+        "kind": "slipstream-inspect",
+        "identity": ("db",),
+        "metrics": ("dimension", "item_count", "vector_count", "missing_vectors", "orphan_vectors"),
+        "digests": ("ids_sha256",),
+        "max_integer": MAX_NATIVE_INTEGER,
+    },
+    "slipstream/manifest/v1": {
+        "kind": "slipstream-manifest",
+        "identity": ("package_version",),
+        "metrics": ("dimension", "item_count", "vector_count"),
+        "digests": ("ids_sha256", "rows_sha256", "manifest_sha256"),
+        "max_integer": MAX_NATIVE_INTEGER,
+    },
+    "slipstream/query/v1": {
+        "kind": "slipstream-query",
+        "identity": ("db",),
+        "metrics": ("k", "result_count"),
+        "digests": ("result_ids_sha256",),
+        "declared_fields": ("results",),
+        "max_integer": MAX_NATIVE_INTEGER,
+    },
+    "slipstream/verify/v1": {
+        "kind": "slipstream-verify",
+        "identity": (),
+        "metrics": (),
+        "digests": ("manifest_sha256", "current_manifest_sha256"),
+        "max_integer": MAX_NATIVE_INTEGER,
+    },
     "context-pack/v1": {
         "kind": "context",
         "identity": ("run_id", "pack_id"),
@@ -341,6 +370,50 @@ def _validate_sourcemark_check(payload: dict[str, Any]) -> None:
     for field in ("policy_sha256", "session_sha256"):
         if not isinstance(payload.get(field), str) or not _SOURCEMARK_HASH.fullmatch(payload[field]):
             raise ProofError("Sourcemark check export identity is malformed")
+def _slipstream_query_projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Project Slipstream query results without copying caller-owned rows."""
+
+    unknowns: list[str] = []
+    status = {field: _state(payload, field, unknowns) for field in _STATUS_FIELDS}
+    metrics: dict[str, int] = {}
+    k = _optional_int(payload, "k", unknowns, adapter.get("max_integer"))
+    if k is not None:
+        metrics["k"] = k
+    results = payload.get("results")
+    result_ids: list[str] = []
+    if "results" not in payload:
+        unknowns.append("results_not_declared")
+    elif not isinstance(results, list):
+        unknowns.append("results_malformed")
+    else:
+        metrics["result_count"] = len(results)
+        for item in results:
+            if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"]:
+                unknowns.append("result_item_malformed")
+                continue
+            result_ids.append(item["id"])
+        if "result_item_malformed" not in unknowns:
+            digests = {"result_ids_sha256": digest_json(result_ids)}
+        else:
+            digests = {}
+    known_fields = sorted(
+        set(field for field in _STATUS_FIELDS if field in payload)
+        | {field for field in ("db", "k", "results") if field in payload}
+    )
+    return {
+        "status": {
+            "ok": status["ok"],
+            "observed": status["observed"],
+            "partial": status["partial"],
+            "timed_out": status["timed_out"],
+            "outcome": None,
+            "exit_code": None,
+        },
+        "identity": _identity(payload, adapter["identity"], unknowns),
+        "metrics": metrics,
+        "declared_fields": known_fields,
+        "digests": digests,
+    }, _unique(unknowns)
 
 
 def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -401,6 +474,8 @@ def _projection(payload: dict[str, Any], adapter: dict[str, Any]) -> tuple[dict[
             "declared_fields": sorted(set(payload["counts"]) | {"policy_sha256", "session_sha256"}),
             "digests": {field: payload[field] for field in adapter["digests"]},
         }, _unique(unknowns)
+    if payload.get("schema") == "slipstream/query/v1":
+        return _slipstream_query_projection(payload, adapter)
 
     unknowns: list[str] = []
     status = {field: _state(payload, field, unknowns) for field in _STATUS_FIELDS}
@@ -636,6 +711,7 @@ def _shape_errors(document: dict[str, Any]) -> list[str]:
             adapter = ADAPTERS.get(source["schema"], {})
             allowed_fields = set(_STATUS_FIELDS) | {"exit_code"} | set(adapter.get("identity", ())) | set(adapter.get("metrics", ()))
             allowed_fields |= set(adapter.get("digests", ()))
+            allowed_fields |= set(adapter.get("declared_fields", ()))
             if source["schema"] == FORGEYARD_EVIDENCE_SCHEMA:
                 allowed_fields |= {"artifacts", "status"}
             if set(fields) - allowed_fields:
