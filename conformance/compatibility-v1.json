@@ -447,6 +447,68 @@
       ]
     },
     {
+      "schema": "slipstream/inspect/v1",
+      "kind": "slipstream-inspect",
+      "identity": [
+        "db"
+      ],
+      "metrics": [
+        "dimension",
+        "item_count",
+        "vector_count",
+        "missing_vectors",
+        "orphan_vectors"
+      ],
+      "digests": [
+        "ids_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "slipstream/manifest/v1",
+      "kind": "slipstream-manifest",
+      "identity": [
+        "package_version"
+      ],
+      "metrics": [
+        "dimension",
+        "item_count",
+        "vector_count"
+      ],
+      "digests": [
+        "ids_sha256",
+        "rows_sha256",
+        "manifest_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "slipstream/query/v1",
+      "kind": "slipstream-query",
+      "identity": [
+        "db"
+      ],
+      "metrics": [
+        "k",
+        "result_count"
+      ],
+      "digests": [
+        "result_ids_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
+      "schema": "slipstream/verify/v1",
+      "kind": "slipstream-verify",
+      "identity": [],
+      "metrics": [],
+      "digests": [
+        "manifest_sha256",
+        "current_manifest_sha256"
+      ],
+      "source": "src/agent_proof/interop.py:ADAPTERS"
+    },
+    {
       "schema": "worktree-conservator.result/v1",
       "kind": "worktree",
       "identity": [

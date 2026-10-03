@@ -45,13 +45,14 @@ artifact, and exports a deterministic tarball. It never reads local transcripts 
 
 The reviewed interop registry also recognizes native `agent-sandbox/v2`,
 `agent-trace/inspect/v1`, `agent-trace/query/v1`, `mcp-doctor/v1`, and
-`worktree-conservator.result/v1` envelopes. Their projections keep only bounded
+`worktree-conservator.result/v1` envelopes, plus Slipstream's
+`slipstream/query/v1`, `slipstream/inspect/v1`, `slipstream/manifest/v1`, and
+`slipstream/verify/v1` readbacks. Their projections keep only bounded
 status, counters, and declared digests; owner output, findings, command text,
 owner-payload paths, and event bodies remain outside the normalized record.
 The caller-selected root-relative input path remains in `source.path` for binding;
 use a neutral artifact name if its filename would reveal private context. Policy receipts
-without a producer schema and Slipstream's nested Node envelopes remain explicit
-follow-up adapter work rather than being guessed here.
+without a producer schema remain explicit follow-up adapter work rather than being guessed here.
 
 The Agent Systems Lab conformance corpus lives in [`conformance/agent-systems-lab.json`](conformance/agent-systems-lab.json)
 and exercises the reviewed policy, sandbox, evaluation, trace, context-pack, resume, and
