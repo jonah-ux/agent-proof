@@ -19,9 +19,19 @@ result happened. `observed`, `partial`, and `unknowns` remain explicit in every 
 ## Try the complete workflow
 
 ```console
-python3 -m pip install git+https://github.com/jonah-ux/agent-proof.git@main
+python3 -m pip install git+https://github.com/jonah-ux/agent-proof.git@v0.3.1
+agent-proof --version
 python3 demos/demo.py
 ```
+
+The [standalone evidence-chain walkthrough](docs/walkthrough/index.html) turns the same
+synthetic flow into a clickable visual readback. It uses fixture data only, includes a live
+tamper-refusal interaction, and links back to the source files and published release.
+
+Agent Proof is intentionally installable and runnable on its own. It has no runtime dependency
+on another Jonah-UX repository, local service, or sibling checkout. The optional interoperability
+adapter can read recognized envelope files when you provide them, but the core CLI, demo, record,
+ledger, graph, and bundle verification paths remain self-contained.
 
 The synthetic demo composes policy, sandbox, and evaluation JSON envelopes, creates two linked
 records, merges them, tampers with an artifact, proves that verification refuses it, restores the
