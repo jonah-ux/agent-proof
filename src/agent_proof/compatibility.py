@@ -1524,8 +1524,8 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
                         "capability mapping selector requires explicit protocol facts",
                     )
                 )
-        if "source_fields" in artifact and not _source_fields_valid(
-            artifact["source_fields"], native_schemas
+        if (fmt == "json" or "source_fields" in artifact) and not _source_fields_valid(
+            artifact.get("source_fields"), native_schemas
         ):
             errors.append(
                 _error(
@@ -2302,8 +2302,7 @@ def validate_participant_artifacts(
                 reports.append(report)
                 continue
             if (
-                "source_fields" in artifact
-                and _source_fields_from_document(document, contract)
+                _source_fields_from_document(document, contract)
                 != artifact["source_fields"]
             ):
                 report["state"] = "refused"

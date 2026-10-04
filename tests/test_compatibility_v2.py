@@ -67,6 +67,33 @@ class NativeDeclarationTests(unittest.TestCase):
             )
         )
 
+    def test_json_declarations_require_source_field_provenance(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            charter = Path(temporary) / "charter.json"
+            for index, participant in enumerate(self.manifest["participants"]):
+                for replacement in ("omitted", None, []):
+                    with self.subTest(owner=participant["owner"], value=replacement):
+                        manifest = copy.deepcopy(self.manifest)
+                        artifact = manifest["participants"][index][
+                            "conformance_artifact"
+                        ]
+                        if replacement == "omitted":
+                            del artifact["source_fields"]
+                        else:
+                            artifact["source_fields"] = replacement
+                        errors = contract.validate_manifest_v2(manifest)
+                        self.assertIn("source_unbound", {row["code"] for row in errors})
+                        charter.write_text(json.dumps(manifest))
+                        report = contract.validate_participant_artifacts(
+                            charter, self.sources, artifact_root=OWNERS
+                        )
+                        self.assertFalse(report["ok"], report)
+                        self.assertFalse(report["complete"])
+                        self.assertEqual(report["participants"], [])
+                        self.assertIn(
+                            "source_unbound", {row["code"] for row in report["errors"]}
+                        )
+
     def test_rehashed_native_and_capability_mutations_refuse_only_the_changed_owner(
         self,
     ):

@@ -52,8 +52,10 @@ the reviewed implementation's admission set and this charter's native
 registry. Sandbox v2 is declared by the current producer and accepted by Agent
 Proof's current input registry; the older v1 source snapshot stays frozen.
 
-`source_fields` records the selected source field, schema and declaration role.
-The reader reconstructs that projection from the actual JSON and checks it.
+Every JSON artifact requires a nonempty `source_fields` projection recording
+the selected source field, schema and declaration role. Missing, null or empty
+provenance refuses. The reader reconstructs that projection from the actual
+JSON and checks it.
 `declared_input` describes adapter/consumer input declarations;
 `declared_boundary` preserves other native schema facts without guessing that
 the tool ran or produced a particular artifact. Participant roles may remain
