@@ -1619,79 +1619,30 @@ def negotiate_capability(
     capability: str,
     producer_versions: Any,
     consumer_versions: Any,
+    *,
+    registry: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Choose the highest declared mutually supported protocol version."""
+    """Negotiate one capability through the same explicit registry constraints."""
 
-    errors: list[dict[str, str]] = []
-    if not isinstance(capability, str) or not _CAPABILITY_IDENTIFIER.fullmatch(
-        capability
-    ):
-        errors.append(
-            _error("unsupported_schema", "capability identifier is unsupported")
-        )
-    if not _version_list(producer_versions) or not _version_list(consumer_versions):
-        errors.append(
-            _error(
-                "malformed_version",
-                "producer and consumer versions must be sorted unique positive integers",
-            )
-        )
-    if errors:
+    def peer(versions: Any) -> dict[str, Any]:
         return {
-            "schema": NEGOTIATION_REPORT_SCHEMA,
-            "ok": False,
-            "capability": None,
-            "selected_version": None,
-            "errors": _unique_errors(errors),
+            "schema": CAPABILITY_DECLARATION_SCHEMA,
+            "contract_version": 1,
+            "capabilities": [{"id": capability, "supported_versions": versions}],
+            "native_protocols": [],
         }
-    admitted = SUPPORTED_CAPABILITY_VERSIONS.get(capability)
-    if admitted is None:
-        admitted = SUPPORTED_NATIVE_PROTOCOL_VERSIONS.get(capability)
-    if admitted is None:
-        return {
-            "schema": NEGOTIATION_REPORT_SCHEMA,
-            "ok": False,
-            "capability": capability,
-            "selected_version": None,
-            "errors": [
-                _error(
-                    "unsupported_schema",
-                    "identifier is absent from the reviewed protocol registry",
-                )
-            ],
-        }
-    if any(
-        version not in admitted for version in producer_versions + consumer_versions
-    ):
-        return {
-            "schema": NEGOTIATION_REPORT_SCHEMA,
-            "ok": False,
-            "capability": capability,
-            "selected_version": None,
-            "errors": [_error("unknown_version", "declared version is not reviewed")],
-        }
-    shared = sorted(
-        set(producer_versions).intersection(consumer_versions, admitted), reverse=True
+
+    report = negotiate_capabilities(
+        peer(producer_versions), peer(consumer_versions), registry
     )
-    if not shared:
-        return {
-            "schema": NEGOTIATION_REPORT_SCHEMA,
-            "ok": False,
-            "capability": capability,
-            "selected_version": None,
-            "errors": [
-                _error(
-                    "unsupported_version",
-                    "producer and consumer have no mutually supported version",
-                )
-            ],
-        }
+    if report["results"]:
+        return report["results"][0]
     return {
         "schema": NEGOTIATION_REPORT_SCHEMA,
-        "ok": True,
-        "capability": capability,
-        "selected_version": shared[0],
-        "errors": [],
+        "ok": False,
+        "capability": None,
+        "selected_version": None,
+        "errors": report["errors"],
     }
 
 

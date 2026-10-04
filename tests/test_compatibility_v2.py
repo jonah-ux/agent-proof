@@ -353,6 +353,36 @@ class NativeDeclarationTests(unittest.TestCase):
 
 
 class VersionNegotiationTests(unittest.TestCase):
+    def test_single_capability_helper_requires_the_same_registry_constraints(self):
+        charter_registry = json.loads(CHARTER.read_bytes())["capability_registry"]
+        for identifier in (
+            "evaluation.refusals",
+            "provenance.packet",
+            "work.evidence",
+            "lifecycle.approval",
+        ):
+            with self.subTest(identifier=identifier):
+                missing = contract.negotiate_capability(identifier, [1], [1])
+                self.assertFalse(missing["ok"])
+                self.assertIsNone(missing["selected_version"])
+                unversioned = contract.negotiate_capability(
+                    identifier, [1], [1], registry=charter_registry
+                )
+                self.assertFalse(unversioned["ok"])
+                self.assertIsNone(unversioned["selected_version"])
+                reviewed = declaration(identifier=identifier)
+                positive = contract.negotiate_capability(
+                    identifier, [1], [1], registry=reviewed
+                )
+                self.assertTrue(positive["ok"], positive)
+                self.assertEqual(positive["selected_version"], 1)
+                reviewed["capabilities"] = []
+                absent = contract.negotiate_capability(
+                    identifier, [1], [1], registry=reviewed
+                )
+                self.assertFalse(absent["ok"])
+                self.assertIsNone(absent["selected_version"])
+
     def test_highest_common_native_version_and_disjoint_refusal(self):
         producer = declaration("native_protocols", "agent-sandbox", [1, 2])
         consumer = copy.deepcopy(producer)

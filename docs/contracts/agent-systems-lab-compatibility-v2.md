@@ -88,6 +88,10 @@ and `negotiate_native_protocols` separately. A reviewed registry is required;
 it may be passed explicitly or supplied as `capability_registry` in a peer
 declaration. Every supplied registry is validated and contributes a constraint.
 An explicit registry cannot override a peer's narrower inline registry.
+The single-capability `negotiate_capability` convenience API requires the same
+explicit registry and delegates to `negotiate_capabilities`; its built-in
+identifier catalog cannot establish support without that constraint. Native
+schema families use `negotiate_native_protocols`.
 
 For each shared identifier, the result selects the highest version admitted
 by both peers and every supplied registry. Missing identifiers and disjoint or
