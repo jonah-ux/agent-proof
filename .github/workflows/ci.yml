@@ -25,7 +25,10 @@ jobs:
           python - <<'PY'
           from pathlib import Path, PurePosixPath
           import tarfile
-          required = {"conformance/native-receipts.json", "conformance/compatibility-v1.json", "conformance/agent-systems-lab.json", "conformance/forgeyard-ai-work-evidence-v1.json"}
+          required = {"conformance/native-receipts.json", "conformance/compatibility-v1.json", "conformance/compatibility-v2.json", "conformance/agent-systems-lab.json", "conformance/forgeyard-ai-work-evidence-v1.json"}
+          import json
+          charter = json.loads(Path("conformance/compatibility-v2.json").read_text())
+          required.update(f"conformance/owners/{entry['owner']}.json" for entry in charter["participants"])
           with tarfile.open(next(Path("dist").glob("*.tar.gz"))) as archive:
               names = {"/".join(PurePosixPath(member.name).parts[1:]) for member in archive if member.isfile()}
           missing = sorted(required - names)
@@ -36,6 +39,8 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - name: Validate Agent Systems Lab compatibility charter
         run: python scripts/check_compatibility.py --manifest conformance/compatibility-v1.json
+      - name: Validate offline compatibility v2 charter
+        run: python scripts/check_compatibility.py --schema v2 --manifest conformance/compatibility-v2.json
       - name: Audit public release surface
         run: python scripts/audit_public_surface.py --json
       - run: python -m agent_proof.cli --version
@@ -54,6 +59,7 @@ jobs:
           "$RUNNER_TEMP/agent-proof-wheel/bin/python" -c 'from pathlib import Path; import sys, agent_proof; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; print(source)'
           "$RUNNER_TEMP/agent-proof-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
           "$RUNNER_TEMP/agent-proof-wheel/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_graph.py -v
+          "$RUNNER_TEMP/agent-proof-wheel/bin/python" "$GITHUB_WORKSPACE/scripts/check_installed_compatibility.py" --source-root "$GITHUB_WORKSPACE"
       - name: Verify installed sdist consumer
         shell: bash
         run: |
@@ -68,3 +74,4 @@ jobs:
           "$RUNNER_TEMP/agent-proof-sdist/bin/python" -c 'from pathlib import Path; import sys, agent_proof; source = Path(agent_proof.__file__).resolve(); assert source.is_relative_to(Path(sys.prefix).resolve()), source; print(source)'
           "$RUNNER_TEMP/agent-proof-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_native_adapters.py -v
           "$RUNNER_TEMP/agent-proof-sdist/bin/python" -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_graph.py -v
+          "$RUNNER_TEMP/agent-proof-sdist/bin/python" "$GITHUB_WORKSPACE/scripts/check_installed_compatibility.py" --source-root "$GITHUB_WORKSPACE"
