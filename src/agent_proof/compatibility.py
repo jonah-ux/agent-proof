@@ -175,7 +175,6 @@ V2_REFUSAL_CODES = (
     "invalid_json",
     "invalid_utf8",
     "json_too_deep",
-    "json_too_deep",
     "malformed_manifest",
     "malformed_version",
     "manifest_changed_during_read",

@@ -19,7 +19,7 @@ from agent_proof import cli
 ROOT = Path(__file__).parents[1]
 CHARTER = ROOT / "conformance/compatibility-v2.json"
 OWNERS = ROOT / "conformance/owners"
-CHARTER_DIGEST = "a58483a156facc7cfe321ebad42ec86223276ae5ff5121042b06ab0f9372a46b"
+CHARTER_DIGEST = "b2ed24c74250406b395b681a7d08ae9501161a6aea21a071dd93834fba53479b"
 
 
 def declaration(field="capabilities", identifier="lifecycle.approval", versions=None):
@@ -67,6 +67,18 @@ class NativeDeclarationTests(unittest.TestCase):
                 row.get("capability_versions", "not_declared") == "not_declared"
                 for row in report["participants"]
             )
+        )
+
+    def test_refusal_vocabulary_is_unique_and_duplicate_entries_refuse(self):
+        codes = self.manifest["refusal_codes"]
+        self.assertEqual(len(codes), len(set(codes)))
+        self.assertEqual(
+            len(contract.V2_REFUSAL_CODES), len(set(contract.V2_REFUSAL_CODES))
+        )
+        self.manifest["refusal_codes"].append(codes[0])
+        self.assertIn(
+            "malformed_manifest",
+            {row["code"] for row in contract.validate_manifest_v2(self.manifest)},
         )
 
     def test_json_declarations_require_source_field_provenance(self):
