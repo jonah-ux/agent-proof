@@ -60,7 +60,7 @@ context-integrity adapters. It keeps source values synthetic and verifies that n
 preserves only allowlisted signals and digests.
 
 The additive [`agent-systems-lab/compatibility/v1`](conformance/compatibility-v1.json) charter
-indexes the twelve public owners, pins each reviewed conformance artifact to an immutable commit
+indexes thirteen public owners, pins each reviewed conformance artifact to an immutable commit
 and SHA-256, and defines the bounded cross-repository status and refusal vocabulary. Validate the
 charter from a clean checkout with `python3 scripts/check_compatibility.py`. The checker validates
 the charter's own source identity and structure; it does not fetch or claim to deploy sibling
@@ -72,6 +72,42 @@ source-level adapter; the pinned Trace artifact does not declare its query schem
 The Agent Proof self-pin freezes the pre-native conformance corpus to avoid a
 circular self-reference. Native additions are qualified by their dedicated tests
 and producer receipts, rather than being claimed as cases in that older corpus.
+
+The additive [compatibility/v2 charter](conformance/compatibility-v2.json) validates
+the current thirteen pinned declaration files offline, including their native
+schema versions, explicit field provenance and capability-to-protocol mappings.
+It uses the owners' existing scalar, list and adapter-registry formats. Operation
+names without capability versions stay declaration-only. See the
+[v2 contract and negotiation rules](docs/contracts/agent-systems-lab-compatibility-v2.md)
+for report meaning, input boundaries and the separate native/capability APIs.
+
+```console
+agent-proof compatibility --schema v2 --manifest conformance/compatibility-v2.json
+```
+
+For the content check, select each pinned local file explicitly. This command
+maps the charter's owner list to the supplied fixture directory without scanning
+it or fetching URLs:
+
+```sh
+python - <<'PY'
+import json
+import subprocess
+from pathlib import Path
+
+manifest = Path("conformance/compatibility-v2.json")
+command = ["agent-proof", "compatibility-artifacts", "--manifest", str(manifest),
+           "--artifact-root", "conformance/owners"]
+for entry in json.loads(manifest.read_text())["participants"]:
+    owner = entry["owner"]
+    command += ["--source", f"{owner}={owner}.json"]
+subprocess.run(command, check=True)
+PY
+```
+
+A successful content report proves pinned declaration identity and selected
+facts. Its `execution: not_attempted` and `remote_state: not_contacted` fields
+retain the boundary between declarations and native invocation evidence.
 
 The public release surface can be inspected without installing a third-party scanner:
 

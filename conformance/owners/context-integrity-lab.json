@@ -1,0 +1,23 @@
+{
+  "schema": "agent-systems-lab-context-conformance/v1",
+  "owner": "context-integrity-lab",
+  "native_schema": "context-integrity/v1",
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+    "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930"
+  },
+  "cases": [
+    {"name": "supported", "status": "supported", "ok": true},
+    {"name": "wrong-scope", "status": "unavailable", "reason": "no_matching_scope"},
+    {"name": "stale", "status": "stale", "reason": "no_fresh_records"},
+    {"name": "fresh-irrelevant", "status": "uncertain", "reason": "fresh_records_do_not_support_question"},
+    {"name": "unavailable-source", "status": "stale", "reason": "no_fresh_records"}
+  ],
+  "privacy": {
+    "native_answer_present": true,
+    "downstream_adapter_allowlist_required": true,
+    "raw_source_values_exported_by_adapter": false
+  }
+}

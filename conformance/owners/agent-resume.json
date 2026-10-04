@@ -1,0 +1,22 @@
+{
+  "schema": "agent-systems-lab-resume-conformance/v1",
+  "owner": "agent-resume",
+  "native_schema": "agent-resume/v1",
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+    "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930"
+  },
+  "cases": [
+    {"name": "fingerprinted-record", "status": "verified"},
+    {"name": "tampered-record", "status": "mismatch"},
+    {"name": "changed-pending-fields", "status": "diff", "changed": ["pending"]},
+    {"name": "unbound-record", "status": "unbound", "valid": false}
+  ],
+  "privacy": {
+    "evidence_content_exported": false,
+    "diff_exports": "input_paths_and_record_fingerprints_plus_changed_field_digests",
+    "identity_required": ["goal", "repository", "branch", "commit"]
+  }
+}

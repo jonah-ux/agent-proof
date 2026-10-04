@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0 - 2026-10-04
+
+- Add the offline compatibility/v2 charter over thirteen pinned public owner
+  declarations, with scalar/list/adapter readers and checked source-field roles.
+- Validate native schema versions and Forgeyard's capability-to-protocol string
+  mappings; keep unversioned capability names separate from version support.
+- Negotiate native protocols and capabilities through explicit peer declarations
+  and every supplied registry constraint, selecting the highest admitted common
+  version and refusing malformed, unknown, disjoint or unversioned inputs.
+- Bound manifest/artifact reads, reject non-regular files without named-pipe
+  waits, close descriptors once and detect same-size changes during reads.
+- Emit path-independent v2 input and CLI refusals while preserving valid v1
+  acceptance and its historical manifest report field.
+- Require setuptools 77.0.1 or newer for the existing SPDX license metadata.
+
 ## 0.4.2 - 2026-10-03
 
 - Return structured graph refusals for malformed JSON field shapes before set/dictionary

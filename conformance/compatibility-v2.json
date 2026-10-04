@@ -1,0 +1,890 @@
+{
+  "authority": "agent-proof",
+  "canonicalization": {
+    "allow_nan": false,
+    "encoding": "utf-8",
+    "json": "sorted-keys-compact"
+  },
+  "capability_registry": {
+    "capabilities": [
+      {
+        "id": "evaluation.refusals",
+        "supported_versions": []
+      },
+      {
+        "id": "lifecycle.approval",
+        "supported_versions": []
+      },
+      {
+        "id": "lifecycle.receipt",
+        "supported_versions": []
+      },
+      {
+        "id": "provenance.packet",
+        "supported_versions": []
+      },
+      {
+        "id": "review.compose",
+        "supported_versions": []
+      },
+      {
+        "id": "review.verify",
+        "supported_versions": []
+      },
+      {
+        "id": "trace.export",
+        "supported_versions": []
+      },
+      {
+        "id": "trace.import",
+        "supported_versions": []
+      },
+      {
+        "id": "work.evidence",
+        "supported_versions": []
+      }
+    ],
+    "contract_version": 1,
+    "native_protocols": [
+      {
+        "id": "agent-eval",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "agent-policy",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "agent-policy/receipt",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "agent-resume",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "agent-sandbox",
+        "supported_versions": [
+          1,
+          2
+        ]
+      },
+      {
+        "id": "agent-trace",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "agent-trace/inspect",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "ai-work-evidence",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "atlas-receipt",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "chatlens-trace-envelope",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "context-integrity",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "context-pack",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-compose",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-evidence-receipt",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-provenance-packet",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-provenance-packet-verify",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-record-verify",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-review-packet",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "forgeyard-runtime-evaluation",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "mcp-doctor",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "slipstream/inspect",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "slipstream/manifest",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "slipstream/query",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "slipstream/verify",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "sourcemark/check",
+        "supported_versions": [
+          1
+        ]
+      },
+      {
+        "id": "worktree-conservator.result",
+        "supported_versions": [
+          1
+        ]
+      }
+    ],
+    "schema": "agent-systems-lab/capabilities/v1"
+  },
+  "compatibility_v1_reference": {
+    "manifest_sha256": "4e91ef19b1d4dddb2da41b9065f3a3979df960f5b061308d68bc281ec1ee79ec",
+    "participant_count": 13,
+    "schema": "agent-systems-lab/compatibility/v1"
+  },
+  "contract_version": 2,
+  "participants": [
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-policy-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            },
+            {
+              "field": "receipt_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "6c65bc9c9a889989fd24cd4ef3bba539c96e8e28",
+        "sha256": "85e3bc9489a01bd1447bb22d6dbb3b6f123c4dc56671059900e023c49c8b57cb",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "agent-policy/v1"
+          },
+          {
+            "field": "receipt_schema",
+            "role": "declared_boundary",
+            "schema": "agent-policy/receipt/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/agent-policy/blob/6c65bc9c9a889989fd24cd4ef3bba539c96e8e28/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "agent-policy/v1",
+        "agent-policy/receipt/v1"
+      ],
+      "owner": "agent-policy",
+      "repository": "https://github.com/jonah-ux/agent-policy",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-proof-lab-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "adapters",
+              "item_field": "schema",
+              "kind": "list_field"
+            },
+            {
+              "field": "consumer_contracts",
+              "item_field": "schema",
+              "kind": "list_field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "9f378fedd8f9fae0e5fdb5650018c7af066b27a7",
+        "sha256": "51de868a5dc0c44e5cb700609dc0e687aabccc2074acf7113f55c5917fcc9551",
+        "source_fields": [
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-policy/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-policy/receipt/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-sandbox/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-sandbox/v2"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-eval/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-trace/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "context-pack/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "agent-resume/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "context-integrity/v1"
+          },
+          {
+            "field": "adapters[].schema",
+            "role": "declared_input",
+            "schema": "sourcemark/check/v1"
+          },
+          {
+            "field": "consumer_contracts[].schema",
+            "role": "declared_input",
+            "schema": "ai-work-evidence/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/agent-proof/blob/9f378fedd8f9fae0e5fdb5650018c7af066b27a7/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "agent-policy/v1",
+        "agent-policy/receipt/v1",
+        "agent-sandbox/v1",
+        "agent-sandbox/v2",
+        "agent-eval/v1",
+        "agent-trace/v1",
+        "context-pack/v1",
+        "agent-resume/v1",
+        "context-integrity/v1",
+        "sourcemark/check/v1",
+        "ai-work-evidence/v1"
+      ],
+      "owner": "agent-proof",
+      "repository": "https://github.com/jonah-ux/agent-proof",
+      "role": "consumer"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-resume-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "e33c0e7c27c8e873035ce0d390ac8889247ed237",
+        "sha256": "1490f4e7209cc9ef5e3b46f86d8f0ca58f222612f6a8b712369bf865f674c535",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "agent-resume/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/agent-resume/blob/e33c0e7c27c8e873035ce0d390ac8889247ed237/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "agent-resume/v1"
+      ],
+      "owner": "agent-resume",
+      "repository": "https://github.com/jonah-ux/agent-resume",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-sandbox-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "e400a93bd8cb4d488f5d23d0f8aa398c3bc3afd7",
+        "sha256": "d2481de8ead520091731c3bf54ae4688c917b4bdd08ce895c24d23770768c6ef",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "agent-sandbox/v2"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/agent-sandbox-run/blob/e400a93bd8cb4d488f5d23d0f8aa398c3bc3afd7/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "agent-sandbox/v2"
+      ],
+      "owner": "agent-sandbox-run",
+      "repository": "https://github.com/jonah-ux/agent-sandbox-run",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-trace-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            },
+            {
+              "field": "inspect_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "2a2b0302899db4f086dfbd277ae11bebe8180d59",
+        "sha256": "e949ae734fe3f7b44cd341fe5f1f71b70ec439e37327fd357a0db55888928dd1",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "agent-trace/v1"
+          },
+          {
+            "field": "inspect_schema",
+            "role": "declared_boundary",
+            "schema": "agent-trace/inspect/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/agent-trace-lite/blob/2a2b0302899db4f086dfbd277ae11bebe8180d59/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "agent-trace/v1",
+        "agent-trace/inspect/v1"
+      ],
+      "owner": "agent-trace-lite",
+      "repository": "https://github.com/jonah-ux/agent-trace-lite",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "atlas-lab-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "capabilities_field": "capabilities",
+          "native_schema_selectors": [
+            {
+              "field": "native_schemas",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": "repository",
+          "schema_field": "schema"
+        },
+        "revision": "33daa4f23633239bc651b51f21229dd3109ce375",
+        "sha256": "2e933b51f60d08d6c89d870e68ed3a9c38a097362259b9d59553c08c02ef51c0",
+        "source_fields": [
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "ai-work-evidence/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "atlas-receipt/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/atlas-agent-runtime/blob/33daa4f23633239bc651b51f21229dd3109ce375/conformance/agent-systems-lab.json"
+      },
+      "declared_capabilities": [
+        "lifecycle.approval",
+        "lifecycle.receipt",
+        "work.evidence"
+      ],
+      "native_schemas": [
+        "ai-work-evidence/v1",
+        "atlas-receipt/v1"
+      ],
+      "owner": "atlas-agent-runtime",
+      "repository": "https://github.com/jonah-ux/atlas-agent-runtime",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "chatlens-lab-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "capabilities_field": "capabilities",
+          "native_schema_selectors": [
+            {
+              "field": "native_schemas",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": "repository",
+          "schema_field": "schema"
+        },
+        "revision": "45b95cd038929ee325558de0617825c3d6171836",
+        "sha256": "dad5470122d3e1219727c159a9b3bea21cf980e7339aba0f55d8e922c8dec250",
+        "source_fields": [
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "ai-work-evidence/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "chatlens-trace-envelope/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/chatlens/blob/45b95cd038929ee325558de0617825c3d6171836/conformance/agent-systems-lab.json"
+      },
+      "declared_capabilities": [
+        "trace.export",
+        "trace.import",
+        "work.evidence"
+      ],
+      "native_schemas": [
+        "ai-work-evidence/v1",
+        "chatlens-trace-envelope/v1"
+      ],
+      "owner": "chatlens",
+      "repository": "https://github.com/jonah-ux/chatlens",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-context-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "d5a5bc6acf3ae9b6cfa086bb5ceb82282c316a89",
+        "sha256": "9778feb3f348ede5434e07d18306fe609b8f600c9d588d556db810184a0d57b4",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "context-integrity/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/context-integrity-lab/blob/d5a5bc6acf3ae9b6cfa086bb5ceb82282c316a89/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "context-integrity/v1"
+      ],
+      "owner": "context-integrity-lab",
+      "repository": "https://github.com/jonah-ux/context-integrity-lab",
+      "role": "unknown"
+    },
+    {
+      "capability_protocols": {
+        "evaluation.refusals": [
+          "forgeyard-runtime-evaluation/v1"
+        ],
+        "provenance.packet": [
+          "forgeyard-evidence-receipt/v1",
+          "forgeyard-provenance-packet-verify/v1",
+          "forgeyard-provenance-packet/v1"
+        ],
+        "review.compose": [
+          "forgeyard-compose/v1",
+          "forgeyard-review-packet/v1"
+        ],
+        "review.verify": [
+          "forgeyard-record-verify/v1"
+        ],
+        "work.evidence": [
+          "ai-work-evidence/v1"
+        ]
+      },
+      "conformance_artifact": {
+        "document_schema": "forgeyard-lab-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "capabilities_field": "capabilities",
+          "capability_protocols_field": "capability_protocols",
+          "native_schema_selectors": [
+            {
+              "field": "native_schemas",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": "repository",
+          "schema_field": "schema"
+        },
+        "revision": "330285e2cc3203213687c14d0beae3a2db43f1ad",
+        "sha256": "acd5a492cbfbf9169a73a67fb25e73c8d52a71fdf5e5892e98e9bba2fb8fb749",
+        "source_fields": [
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "ai-work-evidence/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-compose/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-evidence-receipt/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-provenance-packet-verify/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-provenance-packet/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-record-verify/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-review-packet/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "forgeyard-runtime-evaluation/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/forgeyard/blob/330285e2cc3203213687c14d0beae3a2db43f1ad/conformance/agent-systems-lab.json"
+      },
+      "declared_capabilities": [
+        "evaluation.refusals",
+        "provenance.packet",
+        "review.compose",
+        "review.verify",
+        "work.evidence"
+      ],
+      "native_schemas": [
+        "ai-work-evidence/v1",
+        "forgeyard-compose/v1",
+        "forgeyard-evidence-receipt/v1",
+        "forgeyard-provenance-packet-verify/v1",
+        "forgeyard-provenance-packet/v1",
+        "forgeyard-record-verify/v1",
+        "forgeyard-review-packet/v1",
+        "forgeyard-runtime-evaluation/v1"
+      ],
+      "owner": "forgeyard",
+      "repository": "https://github.com/jonah-ux/forgeyard",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-mcp-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "b88b3d7a3376a0baecb3cc0d65ae888be964820d",
+        "sha256": "e084ba588ebd8700e5412a3e4bda24a41fd89bc75330098ef82200374d43dff7",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "mcp-doctor/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/mcp-doctor/blob/b88b3d7a3376a0baecb3cc0d65ae888be964820d/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "mcp-doctor/v1"
+      ],
+      "owner": "mcp-doctor",
+      "repository": "https://github.com/jonah-ux/mcp-doctor",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-slipstream-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schemas",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "1d73de7b031e3f7362360dde056e16ea942fb0eb",
+        "sha256": "6000eb52f1d6ad01ddabe2db1db8267f5c160912554f6e79d56193b1b6cfa3ee",
+        "source_fields": [
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "slipstream/query/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "slipstream/inspect/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "slipstream/manifest/v1"
+          },
+          {
+            "field": "native_schemas",
+            "role": "declared_boundary",
+            "schema": "slipstream/verify/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/slipstream/blob/1d73de7b031e3f7362360dde056e16ea942fb0eb/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "slipstream/query/v1",
+        "slipstream/inspect/v1",
+        "slipstream/manifest/v1",
+        "slipstream/verify/v1"
+      ],
+      "owner": "slipstream",
+      "repository": "https://github.com/jonah-ux/slipstream",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-sourcemark-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "a702abd0df3f59febdcfe43955d7b7ded3abd9a6",
+        "sha256": "5ad3b3696a837956fc1f378171cd7fc30284cb568a9ebd689f8dbdf0eda39001",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "sourcemark/check/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/sourcemark/blob/a702abd0df3f59febdcfe43955d7b7ded3abd9a6/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "sourcemark/check/v1"
+      ],
+      "owner": "sourcemark",
+      "repository": "https://github.com/jonah-ux/sourcemark",
+      "role": "unknown"
+    },
+    {
+      "conformance_artifact": {
+        "document_schema": "agent-systems-lab-worktree-conformance/v1",
+        "format": "json",
+        "owner_contract": {
+          "native_schema_selectors": [
+            {
+              "field": "native_schema",
+              "kind": "field"
+            }
+          ],
+          "owner_field": "owner",
+          "repository_field": null,
+          "schema_field": "schema"
+        },
+        "revision": "a7bf581764268286ecb03782e0af4677ad9dd0fb",
+        "sha256": "024a2bbfe64f78ce19a3f0841ed2eea85a9780d4bb3cb5297a099d068b6a3b64",
+        "source_fields": [
+          {
+            "field": "native_schema",
+            "role": "declared_boundary",
+            "schema": "worktree-conservator.result/v1"
+          }
+        ],
+        "url": "https://github.com/jonah-ux/worktree-conservator/blob/a7bf581764268286ecb03782e0af4677ad9dd0fb/conformance/agent-systems-lab.json"
+      },
+      "native_schemas": [
+        "worktree-conservator.result/v1"
+      ],
+      "owner": "worktree-conservator",
+      "repository": "https://github.com/jonah-ux/worktree-conservator",
+      "role": "unknown"
+    }
+  ],
+  "refusal_codes": [
+    "artifact_changed_during_read",
+    "artifact_missing",
+    "artifact_not_provided",
+    "artifact_too_large",
+    "artifact_unavailable",
+    "cache_key_mismatch",
+    "capability_declaration_mismatch",
+    "content_unvalidated",
+    "digest_mismatch",
+    "duplicate_identifier",
+    "duplicate_json_key",
+    "invalid_budget",
+    "invalid_json",
+    "invalid_utf8",
+    "json_too_deep",
+    "malformed_manifest",
+    "malformed_version",
+    "manifest_changed_during_read",
+    "manifest_incomplete",
+    "manifest_too_large",
+    "manifest_unavailable",
+    "numeric_overflow",
+    "non_finite_number",
+    "native_schema_mismatch",
+    "noncanonical_github_ref",
+    "owner_contract_mismatch",
+    "owner_repository_mismatch",
+    "source_unbound",
+    "stale_source_identity",
+    "total_artifact_budget_exceeded",
+    "unsafe_path",
+    "unknown_version",
+    "unsupported_schema",
+    "unsupported_version"
+  ],
+  "repository": "https://github.com/jonah-ux/agent-proof",
+  "schema": "agent-systems-lab/compatibility/v2",
+  "state": "complete",
+  "timestamps": {
+    "authority": "native-producer",
+    "format": "rfc3339",
+    "observation_inference": "forbidden",
+    "rewrite": "forbidden"
+  }
+}
