@@ -134,7 +134,7 @@
   <main class="shell">
     <header class="topbar">
       <span class="mark">AGENT PROOF / FIELD GUIDE</span>
-      <span>v0.3.1 prerelease · synthetic · offline</span>
+      <span>v0.5.0 prerelease · synthetic · offline</span>
     </header>
 
     <section class="hero" aria-labelledby="title">
@@ -187,11 +187,11 @@
       <article class="panel walkthrough">
         <div class="panel-head"><div><div class="panel-kicker">03 / run locally</div><h2>From empty directory to proof</h2></div><span class="tag">copy / paste</span></div>
         <ol class="step-list">
-          <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Check out the <code>v0.3.1</code> prerelease so the bundled demo exists.</span></div></li>
+          <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Check out the <code>v0.5.0</code> prerelease so the bundled demo exists.</span></div></li>
           <li class="step"><span class="step-no">2</span><div><strong>Run the synthetic demo</strong><span>It creates temporary policy, sandbox, evaluation, and artifact fixtures.</span></div></li>
           <li class="step"><span class="step-no">3</span><div><strong>Read the refusal</strong><span>The demo mutates an artifact, verifies the old proof, and expects a failed readback.</span></div></li>
         </ol>
-        <div class="terminal" aria-label="Install and demo commands"><code>git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+        <div class="terminal" aria-label="Install and demo commands"><code>git clone --branch v0.5.0 --depth 1 https://github.com/jonah-ux/agent-proof.git
 cd agent-proof
 python3 -m venv .venv
 . .venv/bin/activate
@@ -217,12 +217,12 @@ python3 demos/demo.py</code></div>
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof#readme"><span class="artifact-label">READ</span><span class="artifact-title">README</span><span class="artifact-copy">CLI workflow, schemas, and privacy boundary.</span></a>
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof/blob/main/demos/demo.py"><span class="artifact-label">RUN</span><span class="artifact-title">Synthetic demo</span><span class="artifact-copy">The exact fixture flow behind this page.</span></a>
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof/blob/main/docs/schema.md"><span class="artifact-label">MAP</span><span class="artifact-title">Schema reference</span><span class="artifact-copy">Record, graph, interop, and bundle contracts.</span></a>
-          <a class="artifact" href="https://github.com/jonah-ux/agent-proof/releases/tag/v0.3.1"><span class="artifact-label">GET</span><span class="artifact-title">Published v0.3.1</span><span class="artifact-copy">Release assets and annotated tag on GitHub.</span></a>
+          <a class="artifact" href="https://github.com/jonah-ux/agent-proof/releases/tag/v0.5.0"><span class="artifact-label">GET</span><span class="artifact-title">Published v0.5.0</span><span class="artifact-copy">Release assets and annotated tag on GitHub.</span></a>
         </div>
       </article>
     </section>
 
-    <footer><span>synthetic fixture only · no credentials · no sibling service</span><span>Agent Proof v0.3.1 · MIT</span></footer>
+    <footer><span>synthetic fixture only · no credentials · no sibling service</span><span>Agent Proof v0.5.0 · MIT</span></footer>
   </main>
   <script>
     const state = document.querySelector('#state');
@@ -250,7 +250,7 @@ python3 demos/demo.py</code></div>
     document.querySelector('#tamper').addEventListener('click', () => show('fail', 'REFUSED', 'artifact digest changed; stale proof cannot pass', 'tampered fixture', 'false', '1'));
     document.querySelector('#reset').addEventListener('click', () => show('reset', 'READY', 'fixture is waiting for a verification readback', 'reset', 'unknown', 'unknown'));
     document.querySelector('#hero-seal').addEventListener('click', () => document.querySelector('#verify').click());
-    document.querySelector('#hero-copy').addEventListener('click', async () => { const firstRun = `git clone --branch v0.3.1 --depth 1 https://github.com/jonah-ux/agent-proof.git
+    document.querySelector('#hero-copy').addEventListener('click', async () => { const firstRun = `git clone --branch v0.5.0 --depth 1 https://github.com/jonah-ux/agent-proof.git
 cd agent-proof
 python3 -m venv .venv
 . .venv/bin/activate
