@@ -30,20 +30,36 @@ NEGOTIATION_REPORT_SCHEMA = "agent-systems-lab/negotiation/v1"
 IDENTIFIER_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
 _IDENTIFIER = re.compile(IDENTIFIER_PATTERN)
 _REFUSAL_CODE = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
-CAPABILITY_IDENTIFIER_PATTERN = r"^[a-z0-9][a-z0-9._-]{0,63}(?:/[a-z0-9][a-z0-9._-]{0,63})+$"
+CAPABILITY_IDENTIFIER_PATTERN = r"^[a-z0-9][a-z0-9._-]{0,63}(?:/[a-z0-9][a-z0-9._-]{0,63})*$"
 _CAPABILITY_IDENTIFIER = re.compile(CAPABILITY_IDENTIFIER_PATTERN)
 _GITHUB_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,99}$")
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
-# The registry is deliberately limited to protocols owned by this package.
-# Native sibling capabilities are accepted only when a v2 manifest explicitly
-# declares them in its own registry; this module never guesses them from a
-# package version, deployment, or native schema name.
-BUILTIN_CAPABILITY_VERSIONS = {
+# The registry is deliberately limited to reviewed, canonical identifiers.
+# Package semver, deployment versions, and native schema names are not protocol
+# versions.  A caller may negotiate only an identifier present here and in the
+# checked-in v2 registry; this prevents a syntactically valid vendor/foo value
+# from becoming platform support by assertion alone.
+SUPPORTED_CAPABILITY_VERSIONS = {
     "agent-systems-lab/compatibility-artifacts": (1,),
     "agent-systems-lab/native-protocol-negotiation": (1,),
+    "lifecycle.approval": (1,),
+    "lifecycle.receipt": (1,),
+    "trace.export": (1,),
+    "trace.import": (1,),
+    "work.evidence": (1,),
 }
+
+SUPPORTED_NATIVE_PROTOCOL_VERSIONS = {
+    "ai-work-evidence": (1,),
+    "atlas-receipt": (1,),
+    "chatlens-trace-envelope": (1,),
+}
+
+# Kept as a compatibility alias for callers that imported the provisional
+# name before v2 was documented.
+BUILTIN_CAPABILITY_VERSIONS = SUPPORTED_CAPABILITY_VERSIONS
 
 TIMESTAMP_RULES = {
     "authority": "native-producer",
@@ -102,9 +118,39 @@ _V2_TOP_LEVEL_FIELDS = {
     "repository",
     "canonicalization",
     "timestamps",
+    "refusal_codes",
     "capability_registry",
+    "compatibility_v1_reference",
     "participants",
 }
+
+V2_REFUSAL_CODES = (
+    "artifact_changed_during_read",
+    "artifact_missing",
+    "artifact_not_provided",
+    "artifact_too_large",
+    "artifact_unavailable",
+    "cache_key_mismatch",
+    "capability_declaration_mismatch",
+    "digest_mismatch",
+    "duplicate_json_key",
+    "invalid_budget",
+    "invalid_json",
+    "invalid_utf8",
+    "malformed_manifest",
+    "malformed_version",
+    "manifest_incomplete",
+    "native_schema_mismatch",
+    "noncanonical_github_ref",
+    "owner_contract_mismatch",
+    "owner_repository_mismatch",
+    "stale_source_identity",
+    "total_artifact_budget_exceeded",
+    "unsafe_path",
+    "unknown_version",
+    "unsupported_schema",
+    "unsupported_version",
+)
 
 
 def canonical_bytes(payload: dict[str, Any]) -> bytes:
@@ -217,7 +263,7 @@ def load_manifest(path: Path, *, max_bytes: int = DEFAULT_MANIFEST_MAX_BYTES) ->
     except ValueError as exc:
         raise CompatibilityInputError("malformed_manifest", "malformed compatibility manifest") from exc
     if not isinstance(payload, dict):
-        raise ValueError("malformed compatibility manifest: root must be an object")
+        raise CompatibilityInputError("malformed_manifest", "malformed compatibility manifest")
     return payload
 
 
@@ -233,6 +279,8 @@ def validate_manifest(payload: dict[str, Any]) -> list[dict[str, str]]:
     repositories; this list only covers cross-repository charter failures.
     """
 
+    if not isinstance(payload, dict):
+        return [_error("malformed_manifest", "compatibility manifest must be an object")]
     errors: list[dict[str, str]] = []
     unknown = sorted(set(payload) - _TOP_LEVEL_FIELDS)
     if unknown:
@@ -240,8 +288,8 @@ def validate_manifest(payload: dict[str, Any]) -> list[dict[str, str]]:
 
     if payload.get("schema") != COMPATIBILITY_SCHEMA:
         errors.append(_error("unsupported_schema", "schema must be agent-systems-lab/compatibility/v1"))
-    if type(payload.get("contract_version")) is not int or payload.get("contract_version") != SUPPORTED_CONTRACT_VERSION:
-        errors.append(_error("unknown_version", "contract_version must be the integer 1"))
+    if payload.get("contract_version") != SUPPORTED_CONTRACT_VERSION:
+        errors.append(_error("unknown_version", "contract_version must be 1"))
 
     authority = payload.get("authority")
     if not isinstance(authority, str) or not _IDENTIFIER.fullmatch(authority):
@@ -379,7 +427,6 @@ def validate_manifest(payload: dict[str, Any]) -> list[dict[str, str]]:
         if adapters != sorted(adapters, key=lambda item: item.get("schema", "") if isinstance(item, dict) else ""):
             errors.append(_error("malformed_manifest", "adapters must be sorted by schema"))
 
-    errors.extend(_validate_v1_artifact_bindings(payload))
     return sorted(errors, key=lambda item: (item["code"], item["detail"]))
 
 
@@ -559,8 +606,11 @@ def _validate_declaration(registry: Any) -> list[dict[str, str]]:
             if not _version_list(versions):
                 errors.append(_error("malformed_version", "supported_versions must be sorted unique positive integers"))
                 continue
-            known = BUILTIN_CAPABILITY_VERSIONS.get(identifier)
-            if known is not None and any(version not in known for version in versions):
+            registry_versions = SUPPORTED_CAPABILITY_VERSIONS if field == "capabilities" else SUPPORTED_NATIVE_PROTOCOL_VERSIONS
+            known = registry_versions.get(identifier, ())
+            if not known:
+                errors.append(_error("unsupported_schema", "capability identifier is absent from the reviewed registry"))
+            elif any(version not in known for version in versions):
                 errors.append(_error("unknown_version", "capability declares a version not supported by this checker"))
         if entries != sorted(entries, key=lambda item: item.get("id", "") if isinstance(item, dict) else ""):
             errors.append(_error("malformed_manifest", "capability declarations must be sorted by identifier"))
@@ -584,7 +634,8 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
         errors.append(_error("unsupported_schema", "schema must be agent-systems-lab/compatibility/v2"))
     if type(payload.get("contract_version")) is not int or payload.get("contract_version") != SUPPORTED_CONTRACT_VERSION_V2:
         errors.append(_error("unknown_version", "contract_version must be the integer 2"))
-    if payload.get("state") not in {"draft", "complete"}:
+    state = payload.get("state")
+    if not isinstance(state, str) or state not in {"draft", "complete"}:
         errors.append(_error("malformed_manifest", "state must be draft or complete"))
     if not isinstance(payload.get("authority"), str) or not _IDENTIFIER.fullmatch(payload.get("authority", "")):
         errors.append(_error("malformed_manifest", "authority must be a bounded identifier"))
@@ -598,7 +649,18 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
         errors.append(_error("malformed_manifest", "canonicalization does not match the compatibility contract"))
     if payload.get("timestamps") != TIMESTAMP_RULES:
         errors.append(_error("malformed_manifest", "timestamp authority and rewrite rules are required"))
+    refusal_codes = payload.get("refusal_codes")
+    if refusal_codes != list(V2_REFUSAL_CODES):
+        errors.append(_error("malformed_manifest", "refusal_codes must equal the ordered v2 vocabulary"))
     errors.extend(_validate_declaration(payload.get("capability_registry")))
+
+    reference = payload.get("compatibility_v1_reference")
+    if reference != {
+        "schema": COMPATIBILITY_SCHEMA,
+        "manifest_sha256": "4e91ef19b1d4dddb2da41b9065f3a3979df960f5b061308d68bc281ec1ee79ec",
+        "participant_count": 13,
+    }:
+        errors.append(_error("stale_source_identity", "v2 must bind the reviewed compatibility/v1 participant set"))
 
     participants = payload.get("participants")
     if not isinstance(participants, list) or not participants:
@@ -606,7 +668,7 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
         return sorted(errors, key=lambda item: (item["code"], item["detail"]))
     owners: set[str] = set()
     for entry in participants:
-        if not isinstance(entry, dict) or set(entry) != {"owner", "repository", "conformance_artifact"}:
+        if not isinstance(entry, dict) or set(entry) != {"owner", "repository", "native_schemas", "conformance_artifact"}:
             errors.append(_error("malformed_manifest", "each v2 participant must contain owner, repository, and conformance_artifact"))
             continue
         owner = entry.get("owner")
@@ -618,6 +680,15 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
         repository = entry.get("repository")
         if _github_repository(repository) is None:
             errors.append(_error("noncanonical_github_ref", "participant repository is not canonical"))
+        native_schemas = entry.get("native_schemas")
+        native_schemas_valid = (
+            isinstance(native_schemas, list)
+            and bool(native_schemas)
+            and all(isinstance(schema, str) and _CAPABILITY_IDENTIFIER.fullmatch(schema) for schema in native_schemas)
+            and len(native_schemas) == len(set(native_schemas))
+        )
+        if not native_schemas_valid:
+            errors.append(_error("unsupported_schema", "participant native_schemas must be canonical and unique"))
         artifact = entry.get("conformance_artifact")
         required_artifact = {"url", "revision", "sha256", "format", "document_schema", "owner_contract"}
         if not isinstance(artifact, dict) or set(artifact) != required_artifact:
@@ -632,23 +703,32 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
             if not _github_artifact(artifact.get("url"), repository, revision):
                 errors.append(_error("owner_repository_mismatch", "artifact URL is not bound to the participant repository"))
         fmt = artifact.get("format")
-        if fmt not in {"bytes", "json"}:
-            errors.append(_error("unsupported_schema", "artifact format must be bytes or json"))
+        if fmt not in {"bytes", "json", "pending"}:
+            errors.append(_error("unsupported_schema", "artifact format must be bytes, json, or pending"))
         document_schema = artifact.get("document_schema")
         if fmt == "json" and (not isinstance(document_schema, str) or not _CAPABILITY_IDENTIFIER.fullmatch(document_schema)):
             errors.append(_error("unsupported_schema", "JSON artifacts must declare a document schema"))
         if fmt == "bytes" and document_schema is not None:
             errors.append(_error("malformed_manifest", "byte artifacts cannot declare a document schema"))
+        if fmt == "pending" and (document_schema is not None or state != "draft"):
+            errors.append(_error("malformed_manifest", "pending artifacts are allowed only in an explicitly draft manifest"))
         contract = artifact.get("owner_contract")
         expected_contract = {"owner_field", "repository_field", "schema_field"}
         if fmt == "json" and (
             not isinstance(contract, dict)
-            or set(contract) != expected_contract
+            or not expected_contract.issubset(contract)
+            or set(contract) - (expected_contract | {"native_schemas_field", "capabilities_field"})
             or any(not isinstance(contract[field], str) or not _IDENTIFIER.fullmatch(contract[field]) for field in expected_contract)
         ):
             errors.append(_error("malformed_manifest", "JSON artifacts must declare owner, repository, and schema fields"))
+        if fmt == "json" and isinstance(contract, dict):
+            for field in ("native_schemas_field", "capabilities_field"):
+                if field in contract and (not isinstance(contract[field], str) or not _IDENTIFIER.fullmatch(contract[field])):
+                    errors.append(_error("malformed_manifest", "JSON artifact field bindings must be bounded identifiers"))
         if fmt == "bytes" and contract is not None:
             errors.append(_error("malformed_manifest", "byte artifacts cannot declare an owner contract"))
+        if fmt == "pending" and contract is not None:
+            errors.append(_error("malformed_manifest", "pending artifacts cannot claim an owner contract"))
     if participants != sorted(participants, key=lambda item: item.get("owner", "") if isinstance(item, dict) else ""):
         errors.append(_error("malformed_manifest", "participants must be sorted by owner"))
     return sorted(errors, key=lambda item: (item["code"], item["detail"]))
@@ -676,6 +756,7 @@ def check_manifest_v2(path: Path) -> dict[str, Any]:
             "errors": [_error("malformed_manifest", "malformed compatibility manifest")],
         }
     errors = validate_manifest_v2(payload)
+    errors.extend(_validate_participant_bindings(payload))
     return {
         "schema": "agent-systems-lab/compatibility-check/v2",
         "manifest_sha256": manifest_digest(payload),
@@ -721,19 +802,75 @@ def negotiate_capabilities(producer: Mapping[str, Any], consumer: Mapping[str, A
     """Negotiate only explicitly declared capability entries."""
 
     errors: list[dict[str, str]] = []
+    if not isinstance(producer, Mapping) or not isinstance(consumer, Mapping):
+        return {
+            "schema": NEGOTIATION_REPORT_SCHEMA,
+            "ok": False,
+            "results": [],
+            "errors": [_error("malformed_manifest", "producer and consumer declarations must be objects")],
+        }
     if producer.get("schema") != CAPABILITY_DECLARATION_SCHEMA or consumer.get("schema") != CAPABILITY_DECLARATION_SCHEMA:
         errors.append(_error("unsupported_schema", "producer and consumer declarations use an unsupported schema"))
-    if type(producer.get("contract_version")) is not int or type(consumer.get("contract_version")) is not int:
-        errors.append(_error("unknown_version", "declaration contract_version must be an integer"))
-    producer_entries = producer.get("capabilities") if isinstance(producer.get("capabilities"), list) else []
-    consumer_entries = consumer.get("capabilities") if isinstance(consumer.get("capabilities"), list) else []
-        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str) or entry.get("id") in pmap:
-            errors.append(_error("malformed_manifest", "capability declarations contain malformed or duplicate entries"))
+    for declaration in (producer, consumer):
+        if type(declaration.get("contract_version")) is not int:
+            errors.append(_error("unknown_version", "declaration contract_version must be an integer"))
+        elif declaration.get("contract_version") != 1:
+            errors.append(_error("unknown_version", "declaration contract_version is unsupported"))
+    producer_entries: list[Any] = []
+    consumer_entries: list[Any] = []
+    raw_producer_entries = producer.get("capabilities")
+    raw_consumer_entries = consumer.get("capabilities")
+    if isinstance(raw_producer_entries, list):
+        producer_entries = raw_producer_entries
+    else:
+        errors.append(_error("malformed_manifest", "producer capabilities must be a list"))
+    if isinstance(raw_consumer_entries, list):
+        consumer_entries = raw_consumer_entries
+    else:
+        errors.append(_error("malformed_manifest", "consumer capabilities must be a list"))
+    pmap: dict[str, Any] = {}
+    cmap: dict[str, Any] = {}
+    for entry in producer_entries:
+        if not isinstance(entry, dict) or set(entry) != _DECLARATION_ENTRY_FIELDS or not isinstance(entry.get("id"), str) or not _CAPABILITY_IDENTIFIER.fullmatch(entry.get("id", "")) or entry.get("id") in pmap:
+            errors.append(_error("malformed_manifest", "producer capability entries are malformed or duplicated"))
         else:
-            pmap[entry["id"]] = entry.get("supported_versions")
+            versions = entry.get("supported_versions")
+            if not _version_list(versions):
+                errors.append(_error("malformed_version", "producer versions must be sorted unique positive integers"))
+            else:
+                pmap[entry["id"]] = versions
+    for entry in consumer_entries:
+        if not isinstance(entry, dict) or set(entry) != _DECLARATION_ENTRY_FIELDS or not isinstance(entry.get("id"), str) or not _CAPABILITY_IDENTIFIER.fullmatch(entry.get("id", "")) or entry.get("id") in cmap:
+            errors.append(_error("malformed_manifest", "consumer capability entries are malformed or duplicated"))
+        else:
+            versions = entry.get("supported_versions")
+            if not _version_list(versions):
+                errors.append(_error("malformed_version", "consumer versions must be sorted unique positive integers"))
+            else:
+                cmap[entry["id"]] = versions
+    registry = producer.get("capability_registry")
+    if not isinstance(registry, dict):
+        registry = consumer.get("capability_registry")
+    registry_entries = registry.get("native_protocols", []) if isinstance(registry, dict) else []
+    supported: dict[str, set[int]] = {}
+    if not isinstance(registry_entries, list):
+        errors.append(_error("malformed_manifest", "capability registry native_protocols must be a list"))
+    else:
+        for entry in registry_entries:
+            if not isinstance(entry, dict) or set(entry) != _DECLARATION_ENTRY_FIELDS or not isinstance(entry.get("id"), str) or not _CAPABILITY_IDENTIFIER.fullmatch(entry.get("id", "")) or entry.get("id") in supported or not _version_list(entry.get("supported_versions")):
+                errors.append(_error("unsupported_schema", "capability registry contains an unsupported declaration"))
+                continue
+            supported[entry["id"]] = set(entry["supported_versions"])
     results: list[dict[str, Any]] = []
     for capability in sorted(set(pmap).intersection(cmap)):
-        results.append(negotiate_capability(capability, pmap[capability], cmap[capability]))
+        if capability not in supported:
+            results.append({"schema": NEGOTIATION_REPORT_SCHEMA, "ok": False, "capability": capability, "selected_version": None, "errors": [_error("unsupported_schema", "capability is absent from validated platform registry")]})
+            continue
+        common = set(pmap[capability]).intersection(cmap[capability], supported[capability])
+        if common:
+            results.append({"schema": NEGOTIATION_REPORT_SCHEMA, "ok": True, "capability": capability, "selected_version": max(common), "errors": []})
+        else:
+            results.append({"schema": NEGOTIATION_REPORT_SCHEMA, "ok": False, "capability": capability, "selected_version": None, "errors": [_error("unsupported_version", "no mutually declared platform-supported version exists")]})
     if errors:
         return {"schema": NEGOTIATION_REPORT_SCHEMA, "ok": False, "results": results, "errors": sorted(errors, key=lambda item: (item["code"], item["detail"]))}
     return {"schema": NEGOTIATION_REPORT_SCHEMA, "ok": bool(results) and all(item["ok"] for item in results), "results": results, "errors": [] if results else [_error("unsupported_version", "no mutually declared capability exists")]}
@@ -779,6 +916,8 @@ def _open_regular_no_follow(root: Path, relative: Path) -> tuple[int, os.stat_re
 def _read_artifact(root: Path, relative: Path, max_bytes: int) -> tuple[bytes | None, str | None]:
     if type(max_bytes) is not int or max_bytes <= 0:
         return None, "invalid_budget"
+    if not _safe_relative_path(relative):
+        return None, "unsafe_path"
     opened = _open_regular_no_follow(root, relative)
     if opened is None:
         return None, "artifact_missing"
@@ -817,6 +956,58 @@ def _owner_contract_matches(payload: Any, owner: str, repository: str, schema: s
     )
 
 
+def _declared_schema_values(value: Any) -> list[str] | None:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+    return None
+
+
+def _validate_owner_capabilities(value: Any, registry: Any) -> bool:
+    """Require owner-declared capabilities to be in the checked-in registry."""
+
+    if not isinstance(value, list) or any(not isinstance(item, str) or not _CAPABILITY_IDENTIFIER.fullmatch(item) for item in value):
+        return False
+    if not isinstance(registry, dict):
+        return False
+    declared = registry.get("capabilities")
+    if not isinstance(declared, list):
+        return False
+    known = {
+        item.get("id")
+        for item in declared
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    return len(value) == len(set(value)) and set(value).issubset(known)
+
+
+def _validate_owner_native_versions(value: Any, registry: Any) -> bool:
+    if not isinstance(value, list):
+        return False
+    declared: dict[str, list[int]] = {}
+    for item in value:
+        if not isinstance(item, dict) or set(item) != _DECLARATION_ENTRY_FIELDS:
+            return False
+        identifier = item.get("id")
+        versions = item.get("supported_versions")
+        if not isinstance(identifier, str) or not _CAPABILITY_IDENTIFIER.fullmatch(identifier) or not _version_list(versions):
+            return False
+        if identifier in declared:
+            return False
+        declared[identifier] = versions
+    if not isinstance(registry, dict):
+        return False
+    known: dict[str, Any] = {}
+    for item in registry.get("native_protocols", []):
+        if isinstance(item, dict) and isinstance(item.get("id"), str):
+            known[item["id"]] = item.get("supported_versions")
+    return list(sorted(declared)) == list(declared) and all(
+        identifier in known and versions == known[identifier]
+        for identifier, versions in declared.items()
+    )
+
+
 def validate_participant_artifacts(
     manifest_path: Path,
     sources: Mapping[str, ArtifactSource | Path],
@@ -831,6 +1022,17 @@ def validate_participant_artifacts(
     ``sources`` is keyed by owner and is never expanded by scanning a cache.
     """
 
+    if type(max_bytes) is not int or max_bytes <= 0 or type(max_total_bytes) is not int or max_total_bytes <= 0:
+        return {
+            "schema": ARTIFACT_REPORT_SCHEMA,
+            "ok": False,
+            "complete": False,
+            "remote_state": "not_contacted",
+            "execution": "not_attempted",
+            "manifest_sha256": None,
+            "participants": [],
+            "errors": [_stable_path_error("invalid_budget")],
+        }
     try:
         payload = load_manifest(manifest_path)
     except CompatibilityInputError as exc:
@@ -867,15 +1069,22 @@ def validate_participant_artifacts(
             continue
         local = Path(selected.path)
         if artifact_root is not None:
-            try:
-                local = local.relative_to(artifact_root)
-            except ValueError:
+            root = Path(artifact_root)
+            if local.is_absolute():
+                try:
+                    local = local.relative_to(root)
+                except ValueError:
+                    report["state"] = "refused"
+                    report["error"] = "unsafe_path"
+                    errors.append(_stable_path_error("unsafe_path"))
+                    reports.append(report)
+                    continue
+            if not _safe_relative_path(local):
                 report["state"] = "refused"
                 report["error"] = "unsafe_path"
                 errors.append(_stable_path_error("unsafe_path"))
                 reports.append(report)
                 continue
-            root = artifact_root
         else:
             root, local = local.parent, Path(local.name)
         data, failure = _read_artifact(root, local, max_bytes)
@@ -901,6 +1110,7 @@ def validate_participant_artifacts(
             errors.append(_stable_path_error("digest_mismatch"))
             reports.append(report)
             continue
+        report["validation"] = "byte-only" if artifact["format"] == "bytes" else "owner-json"
         if artifact["format"] == "json":
             try:
                 decoded = data.decode("utf-8")
@@ -912,13 +1122,26 @@ def validate_participant_artifacts(
                 reports.append(report)
                 continue
             repository = entry["repository"]
-            repo_parts = _github_repository(repository)
             expected_schema = artifact["document_schema"]
             contract = artifact["owner_contract"]
-            if repo_parts is None or not _owner_contract_matches(document, owner, repository, expected_schema, contract):
+            if not _owner_contract_matches(document, owner, repository, expected_schema, contract):
                 report["state"] = "refused"
                 report["error"] = "owner_contract_mismatch"
                 errors.append(_stable_path_error("owner_contract_mismatch"))
+                reports.append(report)
+                continue
+            native_field = contract.get("native_schemas_field")
+            capabilities_field = contract.get("capabilities_field")
+            if native_field is not None and _declared_schema_values(document.get(native_field)) != entry["native_schemas"]:
+                report["state"] = "refused"
+                report["error"] = "native_schema_mismatch"
+                errors.append(_stable_path_error("native_schema_mismatch"))
+                reports.append(report)
+                continue
+            if capabilities_field is not None and not _validate_owner_capabilities(document.get(capabilities_field), payload.get("capability_registry")):
+                report["state"] = "refused"
+                report["error"] = "capability_declaration_mismatch"
+                errors.append(_stable_path_error("capability_declaration_mismatch"))
                 reports.append(report)
                 continue
         report["state"] = "verified"
