@@ -137,7 +137,12 @@ JSON declaration gate. Reports always say `remote_state: not_contacted` and
 The v1 charter is frozen at canonical digest
 `4e91ef19b1d4dddb2da41b9065f3a3979df960f5b061308d68bc281ec1ee79ec`, with thirteen
 participants. V2 binds that reference rather than rewriting its historical
-artifact pins, statuses, redaction policy or adapter contracts. V1 valid
+artifact pins, statuses, redaction policy or adapter contracts.
+The v2 participant count and owner identities must match the frozen reference;
+dropping, adding or substituting an owner refuses even when new source bytes
+have matching recomputed hashes. Expanding the set requires a new reviewed
+reference contract. This identity check does not authenticate arbitrary pins.
+V1 valid
 acceptance and its `manifest` report field remain available. V2 diagnostics
 are path-independent; the historical v1 report field is intentionally a caller
 path and must be considered before sharing a v1 report.

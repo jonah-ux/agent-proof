@@ -81,6 +81,71 @@ class NativeDeclarationTests(unittest.TestCase):
             {row["code"] for row in contract.validate_manifest_v2(self.manifest)},
         )
 
+    def test_complete_charter_cannot_drop_add_or_substitute_frozen_owners(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for owner, source in self.sources.items():
+                shutil.copyfile(source, root / (owner + ".json"))
+            extra = copy.deepcopy(
+                next(
+                    row
+                    for row in self.manifest["participants"]
+                    if row["owner"] == "agent-proof"
+                )
+            )
+            extra["owner"] = "extra-owner"
+            extra["repository"] = "https://github.com/jonah-ux/extra-owner"
+            artifact = extra["conformance_artifact"]
+            artifact["revision"] = "a" * 40
+            artifact["url"] = (
+                extra["repository"]
+                + "/blob/"
+                + artifact["revision"]
+                + "/conformance/agent-systems-lab.json"
+            )
+            document = json.loads(self.sources["agent-proof"].read_bytes())
+            document[artifact["owner_contract"]["owner_field"]] = "extra-owner"
+            repository_field = artifact["owner_contract"].get("repository_field")
+            if repository_field:
+                document[repository_field] = extra["repository"]
+            raw = json.dumps(document, sort_keys=True).encode()
+            artifact["sha256"] = hashlib.sha256(raw).hexdigest()
+            (root / "extra-owner.json").write_bytes(raw)
+            for change in ("drop", "add", "substitute"):
+                with self.subTest(change=change):
+                    manifest = copy.deepcopy(self.manifest)
+                    if change in {"drop", "substitute"}:
+                        manifest["participants"] = [
+                            row
+                            for row in manifest["participants"]
+                            if row["owner"] != "agent-proof"
+                        ]
+                    if change in {"add", "substitute"}:
+                        manifest["participants"].append(copy.deepcopy(extra))
+                    manifest["participants"].sort(key=lambda row: row["owner"])
+                    charter = root / "charter.json"
+                    charter.write_text(json.dumps(manifest))
+                    selected = {
+                        row["owner"]: root / (row["owner"] + ".json")
+                        for row in manifest["participants"]
+                    }
+                    report = contract.validate_participant_artifacts(
+                        charter, selected, artifact_root=root
+                    )
+                    self.assertFalse(report["ok"], report)
+                    self.assertFalse(report["complete"])
+                    self.assertIn(
+                        "stale_source_identity",
+                        {row["code"] for row in report["errors"]},
+                    )
+
+    def test_frozen_reference_owner_identities_match_the_immutable_v1_fixture(self):
+        v1 = json.loads((ROOT / "conformance/compatibility-v1.json").read_bytes())
+        self.assertEqual(
+            contract._V1_REFERENCE_OWNERS,
+            frozenset(row["owner"] for row in v1["participants"]),
+        )
+
     def test_json_declarations_require_source_field_provenance(self):
         with tempfile.TemporaryDirectory() as temporary:
             charter = Path(temporary) / "charter.json"

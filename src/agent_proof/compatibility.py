@@ -783,6 +783,25 @@ def check_manifest_v1_with_bindings(path: Path) -> dict[str, Any]:
 
 
 CAPABILITY_DECLARATION_SCHEMA = "agent-systems-lab/capabilities/v1"
+# Frozen reference metadata, tied to the v1 digest checked below. This is not
+# a runtime discovery list: v2 cannot silently change that reviewed owner set.
+_V1_REFERENCE_OWNERS = frozenset(
+    {
+        "agent-policy",
+        "agent-proof",
+        "agent-resume",
+        "agent-sandbox-run",
+        "agent-trace-lite",
+        "atlas-agent-runtime",
+        "chatlens",
+        "context-integrity-lab",
+        "forgeyard",
+        "mcp-doctor",
+        "slipstream",
+        "sourcemark",
+        "worktree-conservator",
+    }
+)
 _DECLARATION_FIELDS = {"schema", "contract_version", "capabilities", "native_protocols"}
 _DECLARATION_ENTRY_FIELDS = {"id", "supported_versions"}
 
@@ -1216,7 +1235,7 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
     if reference != {
         "schema": COMPATIBILITY_SCHEMA,
         "manifest_sha256": "4e91ef19b1d4dddb2da41b9065f3a3979df960f5b061308d68bc281ec1ee79ec",
-        "participant_count": 13,
+        "participant_count": len(_V1_REFERENCE_OWNERS),
     }:
         errors.append(
             _error(
@@ -1546,6 +1565,13 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
                     "pending artifacts cannot claim an owner contract",
                 )
             )
+    if len(participants) != len(_V1_REFERENCE_OWNERS) or owners != _V1_REFERENCE_OWNERS:
+        errors.append(
+            _error(
+                "stale_source_identity",
+                "v2 participants must preserve the frozen compatibility/v1 owner identities",
+            )
+        )
     if participants != sorted(
         participants,
         key=lambda item: item.get("owner", "")
