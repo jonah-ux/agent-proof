@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .compatibility import check_manifest
+from .compatibility import (
+    ArtifactSource,
+    check_manifest,
+    check_manifest_v2,
+    load_manifest,
+    negotiate_capabilities,
+    validate_participant_artifacts,
+)
 from .graph import graph_document, verify_graph
 from .interop import normalize_envelope, verify_interop
 from .ledger import (
@@ -150,8 +157,34 @@ def parser() -> argparse.ArgumentParser:
     compatibility.add_argument(
         "--manifest",
         default="conformance/compatibility-v1.json",
-        help="path to an agent-systems-lab/compatibility/v1 manifest",
+        help="path to an Agent Systems Lab compatibility manifest",
     )
+    compatibility.add_argument("--schema", choices=("v1", "v2"), default="v1")
+    compatibility.add_argument("--json", action="store_true", help="emit the machine-readable report (the default)")
+
+    artifacts = commands.add_parser(
+        "compatibility-artifacts",
+        help="validate explicitly selected local participant artifact bytes offline",
+    )
+    artifacts.add_argument("--manifest", required=True, help="path to a complete compatibility/v2 manifest")
+    artifacts.add_argument(
+        "--source",
+        action="append",
+        default=[],
+        metavar="OWNER=PATH",
+        help="caller-selected local artifact; repeat once per participant",
+    )
+    artifacts.add_argument("--cache-ref", action="append", default=[], metavar="OWNER=URL")
+    artifacts.add_argument("--artifact-root")
+    artifacts.add_argument("--max-bytes", type=int, default=None)
+    artifacts.add_argument("--max-total-bytes", type=int, default=None)
+
+    negotiate = commands.add_parser(
+        "negotiate",
+        help="negotiate explicitly declared producer and consumer capability versions",
+    )
+    negotiate.add_argument("--producer", required=True, help="producer capability declaration JSON")
+    negotiate.add_argument("--consumer", required=True, help="consumer capability declaration JSON")
 
     return root
 
@@ -329,7 +362,46 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["ok"] else 1
 
         if args.command == "compatibility":
-            result = check_manifest(_path(args.manifest))
+            result = check_manifest_v2(_path(args.manifest)) if args.schema == "v2" else check_manifest(_path(args.manifest))
+            _print(result)
+            return 0 if result["ok"] else 2
+
+        if args.command == "compatibility-artifacts":
+            sources: dict[str, ArtifactSource] = {}
+            for declaration in args.source:
+                if "=" not in declaration:
+                    raise ProofError("source selector is malformed")
+                owner, selected = declaration.split("=", 1)
+                if not owner or not selected or owner in sources:
+                    raise ProofError("source selector is malformed")
+                sources[owner] = ArtifactSource(_path(selected))
+            cache_refs: dict[str, str] = {}
+            for declaration in args.cache_ref:
+                if "=" not in declaration:
+                    raise ProofError("cache selector is malformed")
+                owner, reference = declaration.split("=", 1)
+                if not owner or not reference or owner in cache_refs:
+                    raise ProofError("cache selector is malformed")
+                cache_refs[owner] = reference
+            sources = {
+                owner: ArtifactSource(source.path, cache_refs.get(owner))
+                for owner, source in sources.items()
+            }
+            result = validate_participant_artifacts(
+                _path(args.manifest),
+                sources,
+                artifact_root=_path(args.artifact_root) if args.artifact_root else None,
+                **({"max_bytes": args.max_bytes} if args.max_bytes is not None else {}),
+                **({"max_total_bytes": args.max_total_bytes} if args.max_total_bytes is not None else {}),
+            )
+            _print(result)
+            return 0 if result["ok"] else 2
+
+        if args.command == "negotiate":
+            result = negotiate_capabilities(
+                load_manifest(_path(args.producer)),
+                load_manifest(_path(args.consumer)),
+            )
             _print(result)
             return 0 if result["ok"] else 2
 

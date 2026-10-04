@@ -1,0 +1,23 @@
+{
+  "schema": "agent-systems-lab-sandbox-conformance/v1",
+  "owner": "agent-sandbox-run",
+  "native_schema": "agent-sandbox/v2",
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+    "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930"
+  },
+  "cases": [
+    {"name": "bounded-success", "ok": true, "status": "observed"},
+    {"name": "bounded-output", "ok": true, "status": "observed", "mutation": "stdout-limit"},
+    {"name": "timeout", "ok": false, "status": "unknown", "mutation": "timeout"},
+    {"name": "backend-disclosure", "field": "backend", "field_required": true},
+    {"name": "receipt-integrity", "field": "receipt_sha256", "field_required": true}
+  ],
+  "privacy": {
+    "raw_output_bounded": true,
+    "command_digest_present": true,
+    "receipt_digest_present": true
+  }
+}

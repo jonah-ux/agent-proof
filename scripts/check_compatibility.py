@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from agent_proof.compatibility import check_manifest
+from agent_proof.compatibility import check_manifest, check_manifest_v2
 
 
 def main() -> int:
@@ -20,10 +20,12 @@ def main() -> int:
         type=Path,
         default=Path(__file__).resolve().parents[1] / "conformance" / "compatibility-v1.json",
     )
+    parser.add_argument("--schema", choices=("v1", "v2"), default="v1")
+    parser.add_argument("--json", action="store_true", help="emit the machine-readable report (the default)")
     args = parser.parse_args()
-    report = check_manifest(args.manifest)
+    report = check_manifest_v2(args.manifest) if args.schema == "v2" else check_manifest(args.manifest)
     print(json.dumps(report, ensure_ascii=False, sort_keys=True))
-    return 0 if report["ok"] else 1
+    return 0 if report["ok"] else 2
 
 
 if __name__ == "__main__":
