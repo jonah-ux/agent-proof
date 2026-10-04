@@ -8,6 +8,8 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -573,6 +575,30 @@ class VersionNegotiationTests(unittest.TestCase):
 
 
 class CompatibilityCLITests(unittest.TestCase):
+    def test_standalone_script_preserves_v1_refusal_exit_status(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "invalid.json"
+            path.write_text("{}")
+            for schema, expected in (("v1", 1), ("v2", 2)):
+                with self.subTest(schema=schema):
+                    arguments = [
+                        sys.executable,
+                        str(ROOT / "scripts/check_compatibility.py"),
+                        "--manifest",
+                        str(path),
+                    ]
+                    if schema == "v2":
+                        arguments.extend(["--schema", "v2"])
+                    result = subprocess.run(
+                        arguments,
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                        check=False,
+                    )
+                    self.assertEqual(result.returncode, expected, result.stderr)
+                    self.assertFalse(json.loads(result.stdout)["ok"])
+
     def invoke(self, arguments):
         output, errors = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):

@@ -124,8 +124,11 @@ native task was observed. Regular filesystem I/O is still subject to the
 caller's filesystem and process-level deadlines.
 
 The versioned refusal vocabulary is the charter's ordered `refusal_codes` list.
-Errors are deterministic and deduplicated. CLI success returns exit 0; refusal
-returns exit 2. Compatibility argument/input errors also emit path-free JSON.
+Errors are deterministic and deduplicated. The `agent-proof` CLI returns exit
+0 for success and exit 2 for refusal. Its compatibility argument/input errors
+also emit path-free JSON. The standalone source-check script preserves its
+historical v1 refusal exit 1 and uses exit 2 for v2; its argparse usage errors
+retain the source helper's existing plain-text interface.
 Help and the existing non-compatibility CLI retain their normal interfaces.
 
 Artifact reports use `agent-systems-lab/compatibility-artifacts/v1`.

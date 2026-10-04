@@ -25,7 +25,9 @@ def main() -> int:
     args = parser.parse_args()
     report = check_manifest_v2(args.manifest) if args.schema == "v2" else check_manifest(args.manifest)
     print(json.dumps(report, ensure_ascii=False, sort_keys=True))
-    return 0 if report["ok"] else 2
+    if report["ok"]:
+        return 0
+    return 2 if args.schema == "v2" else 1
 
 
 if __name__ == "__main__":
