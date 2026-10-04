@@ -1,0 +1,23 @@
+{
+  "schema": "agent-systems-lab-slipstream-conformance/v1",
+  "owner": "slipstream",
+  "native_schemas": ["slipstream/query/v1", "slipstream/inspect/v1", "slipstream/manifest/v1", "slipstream/verify/v1"],
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+    "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930"
+  },
+  "cases": [
+    {"name": "local-self-test", "status": "pass", "result": "verified"},
+    {"name": "nearest-neighbor", "status": "pass", "schema": "slipstream/query/v1"},
+    {"name": "inspect-readback", "status": "pass", "schema": "slipstream/inspect/v1"},
+    {"name": "manifest-readback", "status": "pass", "schema": "slipstream/manifest/v1"},
+    {"name": "tamper-refusal", "status": "rejected", "schema": "slipstream/verify/v1"}
+  ],
+  "privacy": {
+    "vectors_exported": false,
+    "caller_metadata_exported": false,
+    "index_local_only": true
+  }
+}

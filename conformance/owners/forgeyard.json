@@ -1,0 +1,48 @@
+{
+  "schema": "forgeyard-lab-conformance/v1",
+  "owner": "forgeyard",
+  "repository": "https://github.com/jonah-ux/forgeyard",
+  "native_schemas": [
+    "ai-work-evidence/v1",
+    "forgeyard-compose/v1",
+    "forgeyard-evidence-receipt/v1",
+    "forgeyard-provenance-packet-verify/v1",
+    "forgeyard-provenance-packet/v1",
+    "forgeyard-record-verify/v1",
+    "forgeyard-review-packet/v1",
+    "forgeyard-runtime-evaluation/v1"
+  ],
+  "capabilities": [
+    "evaluation.refusals",
+    "provenance.packet",
+    "review.compose",
+    "review.verify",
+    "work.evidence"
+  ],
+  "capability_protocols": {
+    "evaluation.refusals": ["forgeyard-runtime-evaluation/v1"],
+    "provenance.packet": [
+      "forgeyard-evidence-receipt/v1",
+      "forgeyard-provenance-packet-verify/v1",
+      "forgeyard-provenance-packet/v1"
+    ],
+    "review.compose": ["forgeyard-compose/v1", "forgeyard-review-packet/v1"],
+    "review.verify": ["forgeyard-record-verify/v1"],
+    "work.evidence": ["ai-work-evidence/v1"]
+  },
+  "tests": ["tests/test_lab_conformance.py", "tests/test_runtime_evaluation.py"],
+  "consumer_manifest": "conformance/manifest.json",
+  "negative_cases": ["schema-drift", "nonpassing-evidence", "record-digest-tamper", "stale-source", "packet-digest-tamper", "unbound-source"],
+  "evaluation": {
+    "command": ["forgeyard", "evaluate-refusals"],
+    "schema": "forgeyard-runtime-evaluation/v1",
+    "case_count": 19,
+    "corpus_sha256": "5f70a79f2be8dc48ec26ec4f569951e342ea7717997b11084104cbfc63e0733e"
+  },
+  "limits": [
+    "source-level declaration; referenced tests exercise the native producers separately",
+    "native protocol versions are distinct from package and umbrella contract versions",
+    "capabilities describe local operations, not provider, deployment, security certification, or outside adoption",
+    "pin the source revision and exact declaration bytes before using this document for compatibility decisions"
+  ]
+}

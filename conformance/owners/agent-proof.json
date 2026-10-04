@@ -1,0 +1,17 @@
+{
+  "schema": "agent-proof-lab-conformance/v1",
+  "owner": "agent-proof",
+  "adapters": [
+    {"schema": "agent-policy/v1", "kind": "policy", "identity": ["run_id", "policy_id"]},
+    {"schema": "agent-sandbox/v1", "kind": "sandbox", "identity": ["run_id", "receipt_id"]},
+    {"schema": "agent-eval/v1", "kind": "evaluation", "identity": ["run_id", "evaluation_id", "candidate_id"]},
+    {"schema": "agent-trace/v1", "kind": "trace", "identity": ["run_id", "trace_id"]},
+    {"schema": "context-pack/v1", "kind": "context", "identity": ["run_id", "pack_id"]},
+    {"schema": "agent-resume/v1", "kind": "resume", "identity": ["run_id", "resume_id", "checkpoint_id"]},
+    {"schema": "context-integrity/v1", "kind": "context-integrity", "identity": ["person_id", "project_id"]}
+  ],
+  "consumer_contracts": [
+    {"schema": "ai-work-evidence/v1", "owner": "forgeyard", "corpus": "forgeyard-ai-work-evidence-v1.json"}
+  ],
+  "negative_cases": ["unknown-schema", "symlink-source", "tampered-source", "tampered-projection"]
+}

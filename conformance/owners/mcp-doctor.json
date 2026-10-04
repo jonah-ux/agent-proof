@@ -1,0 +1,23 @@
+{
+  "schema": "agent-systems-lab-mcp-conformance/v1",
+  "owner": "mcp-doctor",
+  "native_schema": "mcp-doctor/v1",
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+    "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930"
+  },
+  "cases": [
+    {"name": "clean-contract", "status": "pass", "exit": 0},
+    {"name": "warning-contract", "status": "pass", "exit": 0, "mutation": "missing-timeout"},
+    {"name": "strict-contract", "status": "fail", "exit": 1, "mutation": "missing-timeout"},
+    {"name": "baseline-drift", "status": "drift", "exit": 1, "mutation": "manifest-change"},
+    {"name": "malformed-input", "status": "invalid", "exit": 2, "mutation": "invalid-json"}
+  ],
+  "privacy": {
+    "manifest_contents_exported": false,
+    "entry_names_and_digests_only": true,
+    "stable_finding_codes": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "atlas-lab-conformance/v1",
+  "owner": "atlas-agent-runtime",
+  "repository": "https://github.com/jonah-ux/atlas-agent-runtime",
+  "native_schemas": ["ai-work-evidence/v1", "atlas-receipt/v1"],
+  "capabilities": ["lifecycle.approval", "lifecycle.receipt", "work.evidence"],
+  "tests": ["tests/test_conformance.py", "tests/test_runtime.py"],
+  "consumer_manifest": "tests/fixtures/agent-systems-lab/conformance.json",
+  "negative_cases": ["queued-not-observed", "failed-not-observed", "tampered-receipt", "unknown-schema"],
+  "limits": [
+    "source-level declarations; producer behavior is exercised separately by the referenced tests",
+    "no shared runtime dependency, provider invocation, deployment, or outside adoption is established"
+  ]
+}

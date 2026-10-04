@@ -1,0 +1,24 @@
+{
+  "schema": "agent-systems-lab-trace-conformance/v1",
+  "owner": "agent-trace-lite",
+  "native_schema": "agent-trace/v1",
+  "inspect_schema": "agent-trace/inspect/v1",
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/283a5e69db44d43f87876b4b30b576a0dcac7930/conformance/agent-systems-lab.json",
+    "revision": "283a5e69db44d43f87876b4b30b576a0dcac7930"
+  },
+  "cases": [
+    {"name": "redacted-query", "status": "observed"},
+    {"name": "deterministic-inspect", "status": "verified"},
+    {"name": "raw-vs-redacted-digest", "status": "verified"},
+    {"name": "malformed-jsonl", "status": "rejected", "mutation": "line"},
+    {"name": "non-object-event", "status": "rejected", "mutation": "root"}
+  ],
+  "privacy": {
+    "raw_source_retained_locally": true,
+    "query_output_redacted": true,
+    "inline_secret_patterns_redacted": true
+  }
+}

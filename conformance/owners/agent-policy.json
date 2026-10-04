@@ -1,0 +1,25 @@
+{
+  "schema": "agent-systems-lab-policy-conformance/v1",
+  "owner": "agent-policy",
+  "native_schema": "agent-policy/v1",
+  "receipt_schema": "agent-policy/receipt/v1",
+  "shared_adapter": {
+    "owner": "agent-proof",
+    "schema": "agent-proof/interop/v1",
+    "manifest_url": "https://github.com/jonah-ux/agent-proof/blob/399564d4e4c1fedaec278409a7821b42eaf76563/conformance/agent-systems-lab.json",
+    "revision": "399564d4e4c1fedaec278409a7821b42eaf76563",
+    "manifest_sha256": "62348cb59c986e3bba00af059774d433a5e3d68f48422c419ac6d6852d250de3"
+  },
+  "cases": [
+    {"name": "explicit-allow", "decision": "allow", "source": "explicit_allow"},
+    {"name": "explicit-deny", "decision": "deny", "source": "explicit_deny"},
+    {"name": "default-deny", "decision": "deny", "source": "default_deny"},
+    {"name": "path-traversal", "valid": false, "mutation": "request.path"},
+    {"name": "unknown-policy-version", "valid": false, "mutation": "policy.version"}
+  ],
+  "privacy": {
+    "receipt_fields": ["decision", "decision_source", "policy.sha256", "request.sha256", "rule_count", "operation_count"],
+    "raw_policy_values_exported": false,
+    "request_targets_summarized": true
+  }
+}
