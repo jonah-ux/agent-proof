@@ -208,6 +208,17 @@ def _repository(value: Any) -> dict[str, str]:
     return result
 
 
+def _verify_repository(value: Any, errors: list[str]) -> None:
+    if not isinstance(value, dict):
+        errors.append("repository must be an object")
+        return
+    try:
+        if _repository(value) != value:
+            errors.append("repository contains unsupported or noncanonical fields")
+    except ProofError:
+        errors.append("repository fields are malformed")
+
+
 def _record_without_digest(record: dict[str, Any]) -> dict[str, Any]:
     unsigned = dict(record)
     unsigned.pop("record_sha256", None)
@@ -446,8 +457,11 @@ def verify_record(record: dict[str, Any], *, artifact_root: Path | None = None) 
         errors.append("record_sha256 is missing or malformed")
     elif supplied != record_digest(record):
         errors.append("record_sha256 does not match canonical record content")
-    if not isinstance(record.get("sequence"), int) or record.get("sequence", 0) < 1:
+    if type(record.get("sequence")) is not int or record["sequence"] < 1:
         errors.append("sequence is missing or invalid")
+    if not isinstance(record.get("run_id"), str) or not record["run_id"]:
+        errors.append("run_id is missing or malformed")
+    _verify_repository(record.get("repository", {}), errors)
     previous = record.get("prev_sha256")
     if previous is not None and (not isinstance(previous, str) or not _HEX64.fullmatch(previous)):
         errors.append("prev_sha256 is missing or malformed")
@@ -457,7 +471,14 @@ def verify_record(record: dict[str, Any], *, artifact_root: Path | None = None) 
         result = {}
     observed = result.get("observed") is True
     partial = result.get("partial") is True
-    unknowns = _unique_strings(result.get("unknowns", []) if isinstance(result.get("unknowns"), list) else [])
+    for field in ("observed", "partial"):
+        if not isinstance(result.get(field), bool):
+            errors.append(f"result.{field} must be boolean")
+    raw_unknowns = result.get("unknowns", [])
+    if not isinstance(raw_unknowns, list) or not all(isinstance(item, str) for item in raw_unknowns):
+        errors.append("result.unknowns must be a list of strings")
+        raw_unknowns = []
+    unknowns = _unique_strings(raw_unknowns)
     artifact_state = _verify_file_entries(record.get("artifacts", []), artifact_root, "artifacts", errors)
     source_state = _verify_file_entries(record.get("sources", []), artifact_root, "sources", errors)
     return {
@@ -515,6 +536,9 @@ def append_record(ledger: dict[str, Any], record: dict[str, Any], *, artifact_ro
 
 def verify_ledger(ledger: dict[str, Any], *, artifact_root: Path | None = None) -> dict[str, Any]:
     errors: list[str] = []
+    _verify_repository(ledger.get("repository", {}), errors)
+    if not isinstance(ledger.get("run_id"), str) or not ledger["run_id"]:
+        errors.append("run_id is missing or malformed")
     if ledger.get("schema") != LEDGER_SCHEMA:
         errors.append(f"unsupported ledger schema: {ledger.get('schema')!r}")
     supplied = ledger.get("ledger_sha256")
@@ -540,6 +564,8 @@ def verify_ledger(ledger: dict[str, Any], *, artifact_root: Path | None = None) 
             continue
         result = verify_record(record, artifact_root=artifact_root)
         errors.extend(f"record {expected_sequence}: {error}" for error in result["errors"])
+        if record.get("run_id") != ledger.get("run_id"):
+            errors.append(f"record {expected_sequence}: run_id differs from ledger")
         if record.get("sequence") != expected_sequence:
             errors.append(f"record {expected_sequence}: sequence is not contiguous")
         if record.get("prev_sha256") != previous_hash:

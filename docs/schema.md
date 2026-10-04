@@ -147,3 +147,10 @@ has its own `graph_sha256`; changing a graph does not rewrite a v2 proof hash. A
 unbound readback checks only the graph structure and marks `input_not_bound` as an unknown; the
 `--require-input`, `--require-observed`, and `--require-artifacts` gates require a source-bound
 readback.
+
+Node fields are fixed by their ID prefix: containers carry `id`, `kind`, `sha256`, and `run_id`;
+records also carry a positive integer `sequence`, null or digest `prev_sha256`, Boolean
+`observed` and `partial`, and sorted unique string `unknowns`; evidence nodes carry `roles`,
+`paths`, and `schemas`. Unsupported node fields are refused. Record and container run identities
+must match the graph. These checks validate structure even without an input document; they do
+not authenticate any recorded claim.

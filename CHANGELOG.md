@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.2 - 2026-10-03
+
+- Return structured graph refusals for malformed JSON field shapes before set/dictionary
+  lookups, relation checks, cycle inspection, or unknown-state collection.
+- Require actual JSON integers for graph node/edge counts and guard chain-sequence comparisons.
+- Refuse malformed record unknowns, Boolean sequences, and missing run identities in the native
+  record verifier before graph derivation; check record-node claims during unbound graph readback.
+- Reject unsupported node fields and normalize record unknowns to sorted unique strings.
+- Check native record observation/partial Boolean fields and canonical repository identity
+  before derivation; refuse malformed repository fields during unbound graph verification.
+- Require ledger/run records to retain their container run identity during readback, matching
+  the existing append gate so derivation cannot emit a graph its verifier refuses.
+- Keep invalid schema values out of graph diagnostics; valid graph hashing and source binding
+  retain the existing contract.
+- Cover the malformed-field API and CLI paths in the graph regression suite used by source,
+  installed wheel, and installed source-distribution CI consumers.
+
 ## 0.4.1 - 2026-10-03
 
 - Correct graph verification for standalone `record/v2` inputs: the record container has
