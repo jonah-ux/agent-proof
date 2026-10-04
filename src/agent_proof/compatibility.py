@@ -1449,6 +1449,7 @@ def validate_manifest_v2(payload: Mapping[str, Any]) -> list[dict[str, str]]:
         if fmt == "json" and (
             not isinstance(contract, dict)
             or not expected_contract.issubset(contract)
+            or "repository_field" not in contract
             or set(contract) - (expected_contract | optional_contract)
             or any(
                 not isinstance(contract[field], str)
@@ -1900,6 +1901,8 @@ def _owner_contract_matches(
     ):
         return False
     repository_field = contract.get("repository_field")
+    if "repository" in payload and repository_field != "repository":
+        return False
     return repository_field is None or payload.get(repository_field) == repository
 
 

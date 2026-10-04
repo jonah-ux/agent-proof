@@ -39,6 +39,9 @@ All thirteen entries use JSON content validation. Each entry binds `owner` and
 `schema`; a source with its own `repository` field must match it. A source
 without that field binds the repository through the immutable artifact URL,
 revision and digest instead of receiving an invented repository property.
+Every JSON owner contract declares `repository_field` explicitly. It is null
+only when the source omits the repository field. A declared source repository
+cannot be disabled by omitting, nulling or remapping its selector.
 
 The reader uses two closed selector forms: `field` reads a string or string
 list, and `list_field` reads one named string field from a list of objects.

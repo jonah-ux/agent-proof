@@ -146,6 +146,46 @@ class NativeDeclarationTests(unittest.TestCase):
             frozenset(row["owner"] for row in v1["participants"]),
         )
 
+    def test_declared_source_repository_binding_cannot_be_omitted_or_remapped(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            charter = Path(temporary) / "charter.json"
+            for index, participant in enumerate(self.manifest["participants"]):
+                document = json.loads(self.sources[participant["owner"]].read_bytes())
+                if "repository" not in document:
+                    continue
+                for replacement in ("omitted", None, "other_repository"):
+                    with self.subTest(owner=participant["owner"], value=replacement):
+                        manifest = copy.deepcopy(self.manifest)
+                        binding = manifest["participants"][index][
+                            "conformance_artifact"
+                        ]["owner_contract"]
+                        if replacement == "omitted":
+                            del binding["repository_field"]
+                        else:
+                            binding["repository_field"] = replacement
+                        charter.write_text(json.dumps(manifest))
+                        report = contract.validate_participant_artifacts(
+                            charter, self.sources, artifact_root=OWNERS
+                        )
+                        self.assertFalse(report["ok"], report)
+                        self.assertFalse(report["complete"])
+                        if replacement == "omitted":
+                            self.assertIn(
+                                "malformed_manifest",
+                                {row["code"] for row in report["errors"]},
+                            )
+                        else:
+                            states = {
+                                row["owner"]: row["state"]
+                                for row in report["participants"]
+                            }
+                            self.assertEqual(
+                                states.pop(participant["owner"]), "refused"
+                            )
+                            self.assertTrue(
+                                all(state == "verified" for state in states.values())
+                            )
+
     def test_json_declarations_require_source_field_provenance(self):
         with tempfile.TemporaryDirectory() as temporary:
             charter = Path(temporary) / "charter.json"
