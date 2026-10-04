@@ -1856,8 +1856,19 @@ def _file_identity(info: os.stat_result) -> tuple[int, int, int, int, int]:
     return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
 
+@dataclass
+class _ArtifactReadBudget:
+    """Remaining aggregate capacity, charged even when a read later refuses."""
+
+    remaining: int
+
+
 def _read_artifact(
-    root: Path, relative: Path, max_bytes: int
+    root: Path,
+    relative: Path,
+    max_bytes: int,
+    *,
+    total_budget: _ArtifactReadBudget | None = None,
 ) -> tuple[bytes | None, str | None]:
     if type(max_bytes) is not int or max_bytes <= 0:
         return None, "invalid_budget"
@@ -1873,14 +1884,22 @@ def _read_artifact(
     try:
         if before.st_size > max_bytes:
             return None, "artifact_too_large"
+        if total_budget is not None and before.st_size > total_budget.remaining:
+            return None, "total_artifact_budget_exceeded"
         chunks: list[bytes] = []
-        remaining = max_bytes + 1
+        remaining = (
+            max_bytes
+            if total_budget is None
+            else min(max_bytes, total_budget.remaining)
+        )
         while remaining:
             chunk = os.read(fd, min(1024 * 1024, remaining))
             if not chunk:
                 break
             chunks.append(chunk)
             remaining -= len(chunk)
+            if total_budget is not None:
+                total_budget.remaining -= len(chunk)
         after = os.fstat(fd)
         if _file_identity(before) != _file_identity(after):
             return None, "artifact_changed_during_read"
@@ -2155,7 +2174,8 @@ def validate_participant_artifacts(
         }
     reports: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
-    total = 0
+    total_budget = _ArtifactReadBudget(max_total_bytes)
+    aggregate_exhausted = False
     for entry in participants:
         owner = entry["owner"]
         artifact = entry["conformance_artifact"]
@@ -2169,6 +2189,12 @@ def validate_participant_artifacts(
             report["state"] = "unavailable"
             report["error"] = "artifact_not_provided"
             errors.append(_stable_path_error("artifact_not_provided"))
+            reports.append(report)
+            continue
+        if aggregate_exhausted or total_budget.remaining <= 0:
+            report["state"] = "refused"
+            report["error"] = "total_artifact_budget_exceeded"
+            errors.append(_stable_path_error("total_artifact_budget_exceeded"))
             reports.append(report)
             continue
         try:
@@ -2209,11 +2235,20 @@ def validate_participant_artifacts(
                 continue
         else:
             local = Path(local.name)
-        data, failure = _read_artifact(root, local, max_bytes)
+        data, failure = _read_artifact(
+            root, local, max_bytes, total_budget=total_budget
+        )
         if failure:
+            if failure == "total_artifact_budget_exceeded":
+                aggregate_exhausted = True
             report["state"] = (
                 "refused"
-                if failure in {"unsafe_path", "artifact_too_large"}
+                if failure
+                in {
+                    "unsafe_path",
+                    "artifact_too_large",
+                    "total_artifact_budget_exceeded",
+                }
                 else "unavailable"
             )
             report["error"] = failure
@@ -2221,13 +2256,6 @@ def validate_participant_artifacts(
             reports.append(report)
             continue
         assert data is not None
-        total += len(data)
-        if total > max_total_bytes:
-            report["state"] = "refused"
-            report["error"] = "total_artifact_budget_exceeded"
-            errors.append(_stable_path_error("total_artifact_budget_exceeded"))
-            reports.append(report)
-            continue
         actual = hashlib.sha256(data).hexdigest()
         report["sha256"] = actual
         if not hmac.compare_digest(actual, artifact["sha256"]):

@@ -5,10 +5,12 @@ import hashlib
 import contextlib
 import io
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from agent_proof import compatibility as contract
 from agent_proof import cli
@@ -93,6 +95,91 @@ class NativeDeclarationTests(unittest.TestCase):
                         self.assertIn(
                             "source_unbound", {row["code"] for row in report["errors"]}
                         )
+
+    def test_aggregate_budget_prevents_reads_and_stops_later_opens(self):
+        with (
+            patch.object(contract, "load_manifest", return_value=self.manifest),
+            patch.object(contract.os, "read", wraps=os.read) as reads,
+            patch.object(
+                contract,
+                "_open_regular_no_follow",
+                wraps=contract._open_regular_no_follow,
+            ) as opens,
+        ):
+            report = contract.validate_participant_artifacts(
+                CHARTER, self.sources, artifact_root=OWNERS, max_total_bytes=1
+            )
+        self.assertFalse(report["ok"])
+        self.assertEqual(reads.call_count, 0)
+        self.assertEqual(opens.call_count, 1)
+        self.assertTrue(
+            all(
+                row["error"] == "total_artifact_budget_exceeded"
+                for row in report["participants"]
+            )
+        )
+
+    def test_exact_aggregate_byte_budget_accepts_all_owner_content(self):
+        original_read = os.read
+        observed = 0
+        budget = sum(path.stat().st_size for path in self.sources.values())
+
+        def counted_read(descriptor, count):
+            nonlocal observed
+            data = original_read(descriptor, count)
+            observed += len(data)
+            return data
+
+        with (
+            patch.object(contract, "load_manifest", return_value=self.manifest),
+            patch.object(contract.os, "read", counted_read),
+        ):
+            report = contract.validate_participant_artifacts(
+                CHARTER, self.sources, artifact_root=OWNERS, max_total_bytes=budget
+            )
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(observed, budget)
+
+    def test_late_read_refusal_still_consumes_aggregate_capacity(self):
+        original_read = os.read
+        observed = 0
+        rewrote = False
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for owner, source in self.sources.items():
+                shutil.copyfile(source, root / (owner + ".json"))
+            first = root / (self.manifest["participants"][0]["owner"] + ".json")
+            raw = first.read_bytes()
+            selected = {owner: root / (owner + ".json") for owner in self.sources}
+
+            def counted_read_then_rewrite(descriptor, count):
+                nonlocal observed, rewrote
+                data = original_read(descriptor, count)
+                observed += len(data)
+                if data and not rewrote:
+                    rewrote = True
+                    first.write_bytes(raw[:-1] + b" ")
+                return data
+
+            with (
+                patch.object(contract, "load_manifest", return_value=self.manifest),
+                patch.object(contract.os, "read", counted_read_then_rewrite),
+            ):
+                report = contract.validate_participant_artifacts(
+                    CHARTER, selected, artifact_root=root, max_total_bytes=len(raw)
+                )
+        self.assertFalse(report["ok"])
+        self.assertTrue(rewrote)
+        self.assertEqual(observed, len(raw))
+        self.assertEqual(
+            report["participants"][0]["error"], "artifact_changed_during_read"
+        )
+        self.assertTrue(
+            all(
+                row["error"] == "total_artifact_budget_exceeded"
+                for row in report["participants"][1:]
+            )
+        )
 
     def test_rehashed_native_and_capability_mutations_refuse_only_the_changed_owner(
         self,

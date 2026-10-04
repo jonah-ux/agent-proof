@@ -100,6 +100,9 @@ capability negotiation merely because their native schema has version 1.
 
 Manifests have a 4 MiB default byte budget; selected artifacts have a 64 MiB
 per-file and 256 MiB aggregate budget. Smaller caller budgets are allowed.
+The aggregate limit bounds bytes actually read, including reads that later
+refuse. A file that cannot fit the remaining capacity refuses before reading,
+and later participants are refused without opening after aggregate exhaustion.
 Duplicate JSON keys, non-finite or oversized numbers, invalid UTF-8, non-object
 manifests and nesting beyond 128 levels refuse. JSON errors never include raw
 payloads or local paths in v2 reports.
