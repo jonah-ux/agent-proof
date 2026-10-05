@@ -123,11 +123,10 @@
       @keyframes settle { from { opacity: .45; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     }
 
-    .hero-card{position:relative;overflow:hidden}.hero-card::after{content:"";position:absolute;right:-56px;top:-54px;width:170px;height:170px;border:1px solid #a9f27d2e;border-radius:50%;box-shadow:0 0 0 18px #a9f27d0d,0 0 0 36px #a9f27d08}.proof-radar{display:block;width:100%;height:auto;margin:0 0 17px}.proof-radar .spark{fill:var(--green);filter:drop-shadow(0 0 7px var(--green))}.mission-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}.mission-actions button{font-size:.68rem;padding:8px 10px}.mission-status{min-height:2.7em;margin:10px 0 0!important;font-size:.72rem!important}.chain-guide{display:flex;align-items:center;gap:9px;margin:0 0 18px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#0d1712;color:var(--muted);font-size:.72rem}.chain-guide strong{color:var(--green);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}.chain-guide span{height:1px;flex:1;background:linear-gradient(90deg,var(--green-dim),transparent)}.node[data-step]{cursor:pointer}.node[data-step][aria-current=true]{border-color:var(--green);background:#183122;box-shadow:0 0 0 2px #a9f27d1a}.node[data-step]:focus-visible{outline:2px solid var(--green);outline-offset:3px}.focus-copy{margin:13px 0 0!important;min-height:2.4em;color:var(--muted);font-size:.74rem}.state.fail + .actions button,.state.reset + .actions button{transition:none}
+    .hero-card{position:relative;overflow:hidden}.hero-card::after{content:"";position:absolute;right:-56px;top:-54px;width:170px;height:170px;border:1px solid #a9f27d2e;border-radius:50%;box-shadow:0 0 0 18px #a9f27d0d,0 0 0 36px #a9f27d08}.proof-radar{display:block;width:100%;height:auto;margin:0 0 17px}.proof-radar .spark{fill:var(--green);filter:drop-shadow(0 0 7px var(--green))}.chain-guide{display:flex;align-items:center;gap:9px;margin:0 0 18px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:#0d1712;color:var(--muted);font-size:.72rem}.chain-guide strong{color:var(--green);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}.chain-guide span{height:1px;flex:1;background:linear-gradient(90deg,var(--green-dim),transparent)}.node[data-step]{cursor:pointer}.node[data-step][aria-current=true]{border-color:var(--green);background:#183122;box-shadow:0 0 0 2px #a9f27d1a}.node[data-step]:focus-visible{outline:2px solid var(--green);outline-offset:3px}.focus-copy{margin:13px 0 0!important;min-height:2.4em;color:var(--muted);font-size:.74rem}.state.fail + .actions button,.state.reset + .actions button{transition:none}
     @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
-    .mission-actions button:nth-child(3){border-color:rgba(159,217,255,.35);color:var(--blue)}
-    @media (max-width: 520px) { .topbar { align-items: flex-start; flex-direction: column; gap: 8px; } .hero { gap: 18px; } .hero-card { padding: 17px; } .mission-actions button { flex: 1 1 100%; } .chain-guide { align-items: flex-start; flex-direction: column; } .chain-guide span { width: 100%; height: 1px; flex: 0 0 auto; } .node-wrap { min-width: 118px; } }
+    @media (max-width: 520px) { .topbar { align-items: flex-start; flex-direction: column; gap: 8px; } .hero { gap: 18px; } .hero-card { padding: 17px; } .chain-guide { align-items: flex-start; flex-direction: column; } .chain-guide span { width: 100%; height: 1px; flex: 0 0 auto; } .node-wrap { min-width: 118px; } }
   </style>
 </head>
 <body>
@@ -148,13 +147,12 @@
           <span class="badge orange">fail-closed</span>
         </div>
       </div>
-      <aside class="hero-card" aria-label="Standalone promise">
+      <aside class="hero-card" aria-label="Package requirements">
         <svg class="proof-radar" viewBox="0 0 320 86" role="img" aria-label="Observed evidence flows through a digest gate into a refusal-safe bundle"><path d="M14 43h78m38 0h56m38 0h82" fill="none" stroke="#2b3a33" stroke-width="2" stroke-dasharray="5 6"/><circle cx="14" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle cx="112" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle cx="190" cy="43" r="8" fill="#173522" stroke="#a9f27d"/><circle class="spark" cx="306" cy="43" r="10"/><g fill="#a5aaa4" font-size="9" font-family="ui-monospace,monospace" text-anchor="middle"><text x="14" y="72">OBSERVE</text><text x="112" y="72">BIND</text><text x="190" y="72">VERIFY</text><text x="306" y="72">REFUSE</text></g></svg>
         <p class="eyebrow">Runs on its own</p>
         <h2>Install it. Run it.</h2>
-        <p>Agent Proof ships as its own Python package with zero runtime dependencies. The proof format can interoperate with other envelopes, but no sibling Jonah-UX repository or service is required.</p>
+        <p>One Python package, no runtime dependencies. The bundled demo creates all its own fixtures; sibling tools are optional.</p>
         <div class="tag-row"><span class="tag">Python ≥ 3.11</span><span class="tag">MIT</span><span class="tag">CLI + library</span></div>
-        <div class="mission-actions" role="group" aria-label="Launch the synthetic proof readback"><button id="hero-seal" type="button">Seal fixture</button><button id="hero-refuse" type="button">Tamper + refuse</button><button id="hero-copy" type="button">Copy first run</button></div><p id="mission-status" class="mission-status" role="status" aria-live="polite">Choose a readback to see the proof gate move. The first-run commands are one click away.</p>
       </aside>
     </section>
 
@@ -185,23 +183,24 @@
       </article>
 
       <article class="panel walkthrough">
-        <div class="panel-head"><div><div class="panel-kicker">03 / run locally</div><h2>From empty directory to proof</h2></div><span class="tag">copy / paste</span></div>
+        <div class="panel-head"><div><div class="panel-kicker">03 / run locally</div><h2>From empty directory to proof</h2></div></div>
         <ol class="step-list">
           <li class="step"><span class="step-no">1</span><div><strong>Install the published release</strong><span>Check out the <code>v0.5.0</code> prerelease so the bundled demo exists.</span></div></li>
           <li class="step"><span class="step-no">2</span><div><strong>Run the synthetic demo</strong><span>It creates temporary policy, sandbox, evaluation, and artifact fixtures.</span></div></li>
           <li class="step"><span class="step-no">3</span><div><strong>Read the refusal</strong><span>The demo mutates an artifact, verifies the old proof, and expects a failed readback.</span></div></li>
         </ol>
-        <div class="terminal" aria-label="Install and demo commands"><code>git clone --branch v0.5.0 --depth 1 https://github.com/jonah-ux/agent-proof.git
+        <div class="terminal" aria-label="Install and demo commands"><code id="first-run">git clone --branch v0.5.0 --depth 1 https://github.com/jonah-ux/agent-proof.git
 cd agent-proof
 python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install .
 agent-proof --version
 python3 demos/demo.py</code></div>
+        <div class="actions"><button id="copy-first-run" type="button">Copy install + demo</button></div><p id="copy-status" class="note" role="status" aria-live="polite"></p>
       </article>
 
       <article class="panel install">
-        <div class="panel-head"><div><div class="panel-kicker">04 / limits</div><h2>What the check covers</h2></div><span class="tag">honest scope</span></div>
+        <div class="panel-head"><div><div class="panel-kicker">04 / limits</div><h2>What the check covers</h2></div></div>
         <div class="facts">
           <div class="fact"><span class="fact-label">Proves</span><span class="fact-value">byte identity, chain order, source binding</span></div>
           <div class="fact"><span class="fact-label">Refuses</span><span class="fact-value">changed artifacts, bad links, traversal</span></div>
@@ -212,7 +211,7 @@ python3 demos/demo.py</code></div>
       </article>
 
       <article class="panel artifact-panel">
-        <div class="panel-head"><div><div class="panel-kicker">05 / source</div><h2>Open the source</h2></div><span class="tag">repo links</span></div>
+        <div class="panel-head"><div><div class="panel-kicker">05 / source</div><h2>Open the source</h2></div></div>
         <div class="artifact-grid">
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof#readme"><span class="artifact-label">READ</span><span class="artifact-title">README</span><span class="artifact-copy">CLI workflow, schemas, and privacy boundary.</span></a>
           <a class="artifact" href="https://github.com/jonah-ux/agent-proof/blob/main/demos/demo.py"><span class="artifact-label">RUN</span><span class="artifact-title">Synthetic demo</span><span class="artifact-copy">The exact fixture flow behind this page.</span></a>
@@ -231,7 +230,6 @@ python3 demos/demo.py</code></div>
     const mode = document.querySelector('#mode-tag');
     const observed = document.querySelector('#observed');
     const unknowns = document.querySelector('#unknowns');
-    const missionStatus = document.querySelector('#mission-status');
     const focusCopy = document.querySelector('#focus-copy');
     const focusTitle = document.querySelector('#chain-focus');
     const stepCopy = {policy:'Policy declares what this fixture is allowed to claim before any bytes are sealed.',sandbox:'Sandbox records the bounded execution boundary; raw output stays outside the proof.',evaluation:'Evaluation contributes a result that remains tied to the exact fixture inputs.',record:'The record names the task, evidence, and boundary in one readable envelope.',proof:'Run proof binds the observed evidence to a digest and refuses a changed artifact.',bundle:'The bundle is the portable readback; it is useful only when every link still matches.'};
@@ -242,22 +240,13 @@ python3 demos/demo.py</code></div>
       mode.textContent = nextMode;
       observed.textContent = nextObserved;
       unknowns.textContent = nextUnknowns;
-      missionStatus.textContent = nextTitle === 'REFUSED' ? 'The changed artifact stopped publication at the digest gate.' : nextTitle === 'SEALED' ? 'The fixture is sealed. Pick a chain stop to inspect its boundary.' : 'Reset the fixture, then choose a clean or tampered readback.';
     }
     function focusStep(step) { document.querySelectorAll('[data-step]').forEach(node => node.setAttribute('aria-current', String(node.dataset.step === step))); focusTitle.textContent = step === 'proof' ? 'Verify' : step[0].toUpperCase() + step.slice(1); focusCopy.textContent = stepCopy[step]; }
     document.querySelectorAll('[data-step]').forEach(node => { node.addEventListener('click', () => focusStep(node.dataset.step)); node.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); focusStep(node.dataset.step); } }); });
     document.querySelector('#verify').addEventListener('click', () => show('', 'SEALED', 'fixture bytes match the proof record', 'clean run', 'true', '0'));
     document.querySelector('#tamper').addEventListener('click', () => show('fail', 'REFUSED', 'artifact digest changed; stale proof cannot pass', 'tampered fixture', 'false', '1'));
     document.querySelector('#reset').addEventListener('click', () => show('reset', 'READY', 'fixture is waiting for a verification readback', 'reset', 'unknown', 'unknown'));
-    document.querySelector('#hero-seal').addEventListener('click', () => document.querySelector('#verify').click());
-    document.querySelector('#hero-copy').addEventListener('click', async () => { const firstRun = `git clone --branch v0.5.0 --depth 1 https://github.com/jonah-ux/agent-proof.git
-cd agent-proof
-python3 -m venv .venv
-. .venv/bin/activate
-python3 -m pip install .
-agent-proof --version
-python3 demos/demo.py`; try { await navigator.clipboard.writeText(firstRun); missionStatus.textContent = 'First-run commands copied. Run the local demo, then use Tamper + refuse here.'; } catch { missionStatus.textContent = 'Copy was unavailable; the full command block remains below for manual selection.'; } });
-    document.querySelector('#hero-refuse').addEventListener('click', () => document.querySelector('#tamper').click());
+    document.querySelector('#copy-first-run').addEventListener('click', async () => { const firstRun = document.querySelector('#first-run').textContent; const copyStatus = document.querySelector('#copy-status'); try { await navigator.clipboard.writeText(firstRun); copyStatus.textContent = 'Commands copied.'; } catch { copyStatus.textContent = 'Copy was unavailable; select the commands above.'; } });
   </script>
 </body>
 </html>
